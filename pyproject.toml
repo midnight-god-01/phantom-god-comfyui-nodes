@@ -1,0 +1,21 @@
+[project]
+name = "phantom-god-comfyui-nodes"
+version = "1.1.0"
+description = "ComfyUI frontend extension pack, starting with Auto Arrange Graph."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+classifiers = [
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Graphics",
+]
+
+[project.urls]
+Homepage = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes"
+Repository = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes"
+"Bug Tracker" = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes/issues"
+Upstream = "https://github.com/pythongosssss/ComfyUI-Custom-Scripts"
+
+[tool.comfy]
+requires-comfyui = ">=0.45.0"

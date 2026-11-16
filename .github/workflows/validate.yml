@@ -1,0 +1,47 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+
+      - name: Check Python entry point and web directory
+        run: |
+          python -m py_compile __init__.py
+          python - <<'PY'
+          from pathlib import Path
+          import importlib.util
+
+          root = Path.cwd()
+          spec = importlib.util.spec_from_file_location("phantom_god_comfyui_nodes", root / "__init__.py")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          assert module.WEB_DIRECTORY == "./web/js"
+          assert module.NODE_CLASS_MAPPINGS == {}
+          assert (root / module.WEB_DIRECTORY / "graphArrange.js").is_file()
+          PY
+
+      - name: Check frontend JavaScript syntax
+        run: node --check web/js/graphArrange.js
+
+      - name: Run layout and menu tests
+        run: node --test
