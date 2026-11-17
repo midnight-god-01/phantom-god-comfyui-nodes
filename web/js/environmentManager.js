@@ -146,8 +146,12 @@ function environmentContentHeight(node) {
 function updateEnvironmentLayout(node) {
     const widget = node.__phantomGodEnvWidget;
     if (!widget) return;
-    const minHeight = environmentContentHeight(node);
-    widget.computeLayoutSize = () => ({ minHeight, maxHeight: 900, minWidth: 390 });
+    widget.options ??= {};
+    widget.computeLayoutSize = () => ({
+        minHeight: environmentContentHeight(node),
+        maxHeight: 900,
+        minWidth: 390,
+    });
     widget.options.getMinHeight = () => environmentContentHeight(node);
     widget.options.getMaxHeight = () => 900;
 }
