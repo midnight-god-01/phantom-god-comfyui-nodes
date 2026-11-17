@@ -338,6 +338,9 @@ def _triton_report(env):
                     .format(target["minor"]),
         )
         return result
+    if target["minor"] >= 5 and sys.version_info < (3, 10):
+        result.update(status="Unsupported Python", message="Triton 3.{} requires Python 3.10 or newer.".format(target["minor"]))
+        return result
     if windows and target["minor"] >= 9 and sys.version_info < (3, 11):
         result.update(status="Unsupported Python", message="Triton 3.9 Windows wheels require Python 3.11 or newer.")
         return result
@@ -358,7 +361,7 @@ def _triton_report(env):
         if installed_pair != (3, target["minor"]):
             result.update(status="Update required", message="Installed Triton {} does not match PyTorch's compatible 3.{} line."
                           .format(installed, target["minor"]))
-        elif result["latest"] and installed != result["latest"]:
+        elif result["latest"] and _version_sort_key(installed) < _version_sort_key(result["latest"]):
             result.update(status="Update available", message="Triton {} is installed; {} is the latest published build in the compatible 3.{} line."
                           .format(installed, result["latest"], target["minor"]))
         elif not result["latest"]:
@@ -557,7 +560,7 @@ async def _install_route(request):
     if package not in ("triton", "sageattention"):
         return web.json_response({"error": "Package must be 'triton' or 'sageattention'."}, status=400)
     with _JOB_LOCK:
-        if _ACTIVE_JOB and _JOBS.get(_ACTIVE_JOB, {}).get("state") == "running":
+        if _ACTIVE_JOB and _JOBS.get(_ACTIVE_JOB, {}).get("state") in ("queued", "running"):
             return web.json_response({"error": "Another Phantom God package installation is already running."}, status=409)
         job_id = uuid.uuid4().hex
         _ACTIVE_JOB = job_id
