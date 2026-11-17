@@ -170,7 +170,7 @@ function renderTextControls(node) {
         const state = createButton(
             isRemoved(node, index) ? "OFF" : "ON",
             "pg-text-field-toggle" + (isRemoved(node, index) ? "" : " pg-on"),
-            isRemoved(node, index) ? "Restore Text " + index : "Hide Text " + index,
+            isRemoved(node, index) ? "Enable Text " + index : "Exclude Text " + index,
             () => {
                 const next = !isRemoved(node, index);
                 setRemoveState(node, index, next);
@@ -374,6 +374,55 @@ function patchNodeType(nodeType) {
     prototype.__phantomGodConcatenateTextPatched = true;
 }
 
+function buildConcatenateNodeIndex() {
+    const index = new Map();
+    const seen = new Set();
+    const visit = (graph, prefix = "") => {
+        if (!graph || seen.has(graph)) return;
+        seen.add(graph);
+        for (const candidate of (graph._nodes || graph.nodes || [])) {
+            if (!candidate) continue;
+            const compositeId = prefix + candidate.id;
+            if (candidate.type === NODE_TYPE || candidate.comfyClass === NODE_TYPE) {
+                index.set(compositeId, candidate);
+                if (!index.has(String(candidate.id))) index.set(String(candidate.id), candidate);
+            }
+            const inner = candidate.subgraph || candidate.graph || candidate._graph;
+            if (inner && inner !== graph) visit(inner, compositeId + ":");
+        }
+    };
+    visit(app.graph);
+    return index;
+}
+
+function installConcatenatePromptInjection() {
+    if (app.__phantomGodConcatenatePromptPatched || typeof app.graphToPrompt !== "function") return;
+    const original = app.graphToPrompt;
+    app.graphToPrompt = async function (...args) {
+        const result = await original.apply(this, args);
+        const output = result?.output;
+        if (!output) return result;
+        let index = null;
+        for (const promptId of Object.keys(output)) {
+            const entry = output[promptId];
+            if (entry?.class_type !== NODE_TYPE) continue;
+            index ??= buildConcatenateNodeIndex();
+            const id = String(promptId);
+            const node = index.get(id) || index.get(id.split(":").at(-1));
+            if (!node) continue;
+            entry.inputs ??= {};
+            for (const fieldIndex of getTextInputIndices(node.inputs)) {
+                if (isRemoved(node, fieldIndex)) {
+                    // OFF excludes the field from execution, including linked inputs.
+                    entry.inputs["text_" + fieldIndex] = "";
+                }
+            }
+        }
+        return result;
+    };
+    app.__phantomGodConcatenatePromptPatched = true;
+}
+
 app.registerExtension({
     name: EXTENSION_NAME,
     beforeRegisterNodeDef(nodeType, nodeData) {
@@ -387,5 +436,7 @@ app.registerExtension({
         renderTextControls(node);
     },
 });
+
+installConcatenatePromptInjection();
 
 console.info("[Phantom God] Concatenate Text feature loaded.");
