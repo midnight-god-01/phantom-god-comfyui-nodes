@@ -111,7 +111,9 @@ function arrangeFloatRight(canvas) {
         const columns = new Map();
         for (const node of orderedNodes) {
             if (!node) continue;
-            const level = node._level || 1;
+            const level = typeof node._level === "number" && Number.isFinite(node._level)
+                ? node._level
+                : 1;
             if (!columns.has(level)) columns.set(level, []);
             columns.get(level).push(node);
         }
