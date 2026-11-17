@@ -18,6 +18,8 @@ class FakeElement {
         this.title = "";
         this.attributes = {};
         this.disabled = false;
+        this.offsetHeight = 0;
+        this.isConnected = true;
     }
 
     appendChild(child) {
@@ -228,6 +230,27 @@ test("LoRA responsive rows remain fluid in narrow and wide nodes", async () => {
     const css = document.getElementById("phantom-god-multi-lora-style").textContent;
     assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(54px,72px\) 44px 28px/);
     assert.match(css, /width:100%;min-width:0/);
+});
+
+test("content sizing includes additional rendered loading and error rows", async () => {
+    const { extension, app } = loadExtension();
+    const node = makeNode();
+    app.graph = { _nodes: [node], setDirtyCanvas() {} };
+    extension.nodeCreated(node);
+    await flushPromises();
+
+    const root = node.__phantomGodLoraRoot;
+    root.children.forEach((child) => { child.offsetHeight = 40; });
+    node.onResize?.();
+    const baseHeight = node.__phantomGodLoraWidget.computeLayoutSize().minHeight;
+
+    const extra = new FakeElement("div");
+    extra.offsetHeight = 240;
+    root.appendChild(extra);
+    node.onResize?.();
+    const measuredHeight = node.__phantomGodLoraWidget.computeLayoutSize().minHeight;
+
+    assert.ok(measuredHeight >= baseHeight + 240);
 });
 
 test("injects row state into the hidden ComfyUI prompt input", async () => {
