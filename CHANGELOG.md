@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0 — 2026-11-18
+
+- Rebuilt Concatenate Text controls into responsive, non-scrolling rows with per-field enable/disable toggles and separate delete buttons.
+- Added width-aware text widget sizing and resize callbacks for Classic and Nodes 2.0.
+- Reworked Multi LoRA controls with fluid rows, improved narrow-width behavior, and live content-height sizing.
+- Removed the fixed 64-row LoRA UI limit.
+- Added frontend regression tests for field toggles, resizing and LoRA stacks beyond 64 rows.
+
+
 ## 1.4.0 — 2026-11-18
 
 - Added Environment Manager node to inspect the active ComfyUI Python, PyTorch, CUDA, GPU, and driver environment.
