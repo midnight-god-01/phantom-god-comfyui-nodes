@@ -1,6 +1,6 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.5.1"
+version = "1.5.2"
 description = "ComfyUI nodes and frontend tools for graph arrangement, text concatenation, model-only multi-LoRA stacking, and CUDA environment management."
 readme = "README.md"
 license = "MIT"
