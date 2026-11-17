@@ -92,7 +92,7 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
             "Windows", "AMD64", capability=(7, 5),
         )
         self.assertIsNone(selected)
-        self.assertIn("compute capability 8.0", reason)
+        self.assertIn("support NVIDIA compute capabilities", reason)
 
     def test_sageattention_rejects_mismatched_cuda(self):
         wheel = _parse_sage_wheel(
