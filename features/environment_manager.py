@@ -20,7 +20,7 @@ SAGE_WHEEL_INDEX = "https://comfy-org.github.io/wheels/sageattention/"
 TRITON_MINOR_MAP = {
     (2, 4): 1, (2, 5): 1, (2, 6): 2, (2, 7): 3,
     (2, 8): 4, (2, 9): 5, (2, 10): 6, (2, 11): 6,
-    (2, 12): 7, (2, 13): 7, (2, 14): 8,
+    (2, 12): 7, (2, 13): 7, (2, 14): 8, (2, 15): 9,
 }
 TRITON_WINDOWS_MAP = {**TRITON_MINOR_MAP, (2, 15): 9}
 SAGE_MIN_COMPUTE_CAPABILITY = (8, 0)
@@ -408,6 +408,8 @@ def _sage_report(env):
         "message": "",
         "import_ok": False,
         "import_detail": None,
+        "triton_ready": False,
+        "triton_version": None,
     }
     if not env.get("torch"):
         result.update(status="Blocked", message="PyTorch could not be imported in this ComfyUI environment.")
@@ -415,6 +417,7 @@ def _sage_report(env):
     if not env.get("cuda_available") or not env.get("cuda"):
         result.update(status="Blocked", message="A working CUDA-enabled NVIDIA PyTorch environment is required.")
         return result
+
     wheels, index_error = _load_sage_wheels()
     if wheels is None:
         result.update(
@@ -429,46 +432,55 @@ def _sage_report(env):
     if wheel is None:
         result.update(status="Unsupported combination", message=reason)
         return result
-    result["supported"] = True
+
     result["target_version"] = wheel["version"]
     result["wheel_url"] = wheel["url"]
-    triton_distribution = "triton-windows" if env.get("system") == "Windows" else "triton"
-    triton_version = _distribution_version(triton_distribution)
+
+    # SageAttention requires Triton, and Triton must match this exact PyTorch
+    # minor. Merely finding any Triton >= 3.0 can still leave torch.compile
+    # with an incompatible backend.
+    triton_target = _triton_target(env["torch"], env["system"])
+    triton_distribution = triton_target["distribution"] if triton_target else None
+    triton_version = _distribution_version(triton_distribution) if triton_distribution else None
     triton_import_ok, triton_import_detail = (
-        _safe_import_status("triton") if triton_version else (False, "Triton is not installed.")
+        _safe_import_status("triton") if triton_version else (False, "The PyTorch-compatible Triton package is not installed.")
     )
     triton_ready = bool(
-        triton_version
-        and _parse_version_pair(triton_version)
-        and _parse_version_pair(triton_version) >= (3, 0)
+        triton_target
+        and triton_version
+        and _parse_version_pair(triton_version) == (3, triton_target["minor"])
         and triton_import_ok
     )
     result["triton_version"] = triton_version
+    result["triton_target"] = ("3.{}".format(triton_target["minor"]) if triton_target else None)
     result["triton_ready"] = triton_ready
+
+    if installed:
+        result["import_ok"], result["import_detail"] = _safe_import_status("sageattention")
+
     if not triton_ready:
-        result["triton_note"] = (
-            "SageAttention requires Triton >=3.0.0. Install or repair the Triton package first. "
-            + (triton_import_detail or "")
+        detail = triton_import_detail or "The installed Triton version does not match the active PyTorch compatibility line."
+        result.update(
+            supported=False,
+            status="Prerequisite missing",
+            message="A working, PyTorch-matched Triton build is required before SageAttention can be installed or used.",
+            triton_note=detail,
         )
-    if installed == wheel["version"]:
-        if triton_ready:
-            result.update(status="Up to date", message="Installed SageAttention wheel exactly matches this Python/PyTorch/CUDA environment.")
-        else:
-            result.update(status="Prerequisite missing", message="SageAttention version matches this environment, but its Triton prerequisite is not ready.")
+        return result
+
+    result["supported"] = True
+    if installed == wheel["version"] and result["import_ok"]:
+        result.update(status="Up to date", message="Installed SageAttention wheel matches this Python/PyTorch/CUDA environment and imports successfully.")
+    elif installed == wheel["version"]:
+        result.update(status="Import failed", message="The matching SageAttention package is installed but cannot be imported: {}".format(result["import_detail"]))
     elif installed:
         result.update(
             status="Update or repair available",
-            message="Installed SageAttention {} differs from the matching wheel {}."
-                    .format(installed, wheel["version"]),
+            message="Installed SageAttention {} differs from the matching wheel {}.".format(installed, wheel["version"]),
         )
     else:
         result.update(status="Not installed", message=reason)
-    result["import_ok"], result["import_detail"] = _safe_import_status("sageattention") if installed else (False, None)
-    if installed and not result["import_ok"]:
-        result["status"] = "Import failed"
-        result["message"] = "SageAttention is installed but cannot be imported: {}".format(result["import_detail"])
     return result
-
 
 def build_environment_report():
     """Collect Python, PyTorch, CUDA, GPU and package compatibility information."""
