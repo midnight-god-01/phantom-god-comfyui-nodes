@@ -1,0 +1,108 @@
+import unittest
+
+from features.environment_manager import (
+    _parse_sage_wheel,
+    _parse_torch_tag,
+    _select_sage_wheel,
+    _triton_target,
+)
+
+
+class EnvironmentManagerCompatibilityTests(unittest.TestCase):
+    def test_triton_windows_tracks_pytorch_minor(self):
+        target = _triton_target("2.15.0+cu130", "Windows")
+        self.assertEqual(target["package"], "triton-windows")
+        self.assertEqual(target["minor"], 9)
+        self.assertEqual(target["spec"], ">=3.9,<3.10")
+
+    def test_triton_linux_uses_official_package(self):
+        target = _triton_target("2.14.1+cu128", "Linux")
+        self.assertEqual(target["package"], "triton")
+        self.assertEqual(target["minor"], 8)
+
+    def test_unknown_linux_triton_mapping_is_not_guessed(self):
+        self.assertIsNone(_triton_target("2.15.0+cu130", "Linux"))
+
+    def test_torch_wheel_tags_accept_compact_and_dotted_versions(self):
+        self.assertEqual(_parse_torch_tag("210"), (2, 10))
+        self.assertEqual(_parse_torch_tag("2.11"), (2, 11))
+
+    def test_parse_sageattention_wheel_name(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu128torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        self.assertEqual(wheel["torch_pair"], (2, 10))
+        self.assertEqual(wheel["cuda_tag"], "128")
+        self.assertEqual(wheel["python_tag"], "312")
+
+    def test_parse_sageattention_dotted_torch_tag(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu130torch2.9-cp313-cp313-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        self.assertEqual(wheel["torch_pair"], (2, 9))
+        self.assertEqual(wheel["cuda_tag"], "130")
+
+    def test_sageattention_selects_only_exact_environment_wheel(self):
+        wheels = [
+            _parse_sage_wheel(
+                "sageattention-2.2.0+cu128torch210-cp312-cp312-win_amd64.whl",
+                "https://example.invalid/torch210.whl",
+            ),
+            _parse_sage_wheel(
+                "sageattention-2.2.0+cu130torch210-cp312-cp312-win_amd64.whl",
+                "https://example.invalid/cu130.whl",
+            ),
+            _parse_sage_wheel(
+                "sageattention-2.2.0+cu128torch29-cp312-cp312-win_amd64.whl",
+                "https://example.invalid/torch29.whl",
+            ),
+        ]
+        selected, reason = _select_sage_wheel(
+            wheels, (3, 12), "2.10.0+cu128", "12.8",
+            "Windows", "AMD64", capability=(8, 9),
+        )
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["torch_pair"], (2, 10))
+        self.assertEqual(selected["cuda_tag"], "128")
+        self.assertIn("Exact", reason)
+
+    def test_sageattention_rejects_pre_ampere_gpu(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu128torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, reason = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.8",
+            "Windows", "AMD64", capability=(7, 5),
+        )
+        self.assertIsNone(selected)
+        self.assertIn("compute capability 8.0", reason)
+
+    def test_sageattention_rejects_mismatched_cuda(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu128torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, _ = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.6",
+            "Windows", "AMD64", capability=(8, 9),
+        )
+        self.assertIsNone(selected)
+
+    def test_sageattention_linux_checks_glibc(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu128torch210-cp312-cp312-manylinux_2_34_x86_64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, reason = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.8",
+            "Linux", "x86_64", glibc_version="2.31", capability=(8, 0),
+        )
+        self.assertIsNone(selected)
+        self.assertIn("glibc 2.34", reason)
+
+
+if __name__ == "__main__":
+    unittest.main()
