@@ -6,7 +6,6 @@ import importlib
 import importlib.metadata
 import importlib.util
 import json
-import os
 import platform
 import re
 import subprocess
@@ -14,16 +13,10 @@ import sys
 import threading
 import time
 import uuid
-from urllib.parse import urljoin
+from urllib.parse import unquote, urljoin
 from urllib.request import Request, urlopen
 
-from aiohttp import web
-
-
 SAGE_WHEEL_INDEX = "https://comfy-org.github.io/wheels/sageattention/"
-TRITON_WINDOWS_MAP = {
-    (2, 4): 3, (2, 5): 3, (2, 6): 3, (2, 7): 3,
-}
 TRITON_MINOR_MAP = {
     (2, 4): 1, (2, 5): 1, (2, 6): 2, (2, 7): 3,
     (2, 8): 4, (2, 9): 5, (2, 10): 6, (2, 11): 6,
@@ -184,7 +177,7 @@ def _load_sage_wheels(force=False):
         parser.feed(page)
         wheels = []
         for href in parser.links:
-            name = href.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+            name = unquote(href.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1])
             if not name.lower().endswith(".whl"):
                 continue
             parsed = _parse_sage_wheel(name, urljoin(SAGE_WHEEL_INDEX, href))
@@ -545,6 +538,7 @@ def _install_worker(job_id, package):
 
 
 async def _check_route(request):
+    from aiohttp import web
     try:
         report = await asyncio.to_thread(build_environment_report)
         return web.json_response(report)
@@ -553,6 +547,7 @@ async def _check_route(request):
 
 
 async def _install_route(request):
+    from aiohttp import web
     global _ACTIVE_JOB
     try:
         data = await request.json()
@@ -581,6 +576,7 @@ async def _install_route(request):
 
 
 async def _job_route(request):
+    from aiohttp import web
     job_id = request.match_info.get("job_id", "")
     with _JOB_LOCK:
         job = _JOBS.get(job_id)
