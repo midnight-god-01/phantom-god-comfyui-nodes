@@ -84,8 +84,8 @@ function makeNode(NodeType = makeNodeType()) {
         size: [420, 300],
         widgets: [
             { name: "delimiter", value: " ", options: {} },
-            { name: "text_1", value: "first", options: {} },
-            { name: "text_2", value: "second", options: {} },
+            { name: "text_1", value: "first", options: {}, computeSize(width) { return [width, 120]; } },
+            { name: "text_2", value: "second", options: {}, computeSize(width) { return [width, 120]; } },
         ],
         inputs: [
             { name: "text_1", type: "STRING", widget: { name: "text_1" } },
@@ -129,6 +129,8 @@ test("Add Text creates a field and each field has an individual toggle", () => {
     const { node, document } = setupNode();
     const root = node.__phantomGodTextControlRoot;
     assert.match(document.getElementById("phantom-god-text-controls-style").textContent, /grid-template-columns:minmax\(0,1fr\) 48px 28px/);
+    // The native multiline widget must keep ComfyUI's own height calculation.
+    assert.equal(node.widgets.find((widget) => widget.name === "text_1").computeSize(420)[1], 120);
     root.children[2].children[0].click();
     const text3 = node.widgets.find((widget) => widget.name === "text_3");
     assert.ok(text3);
