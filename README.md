@@ -47,6 +47,11 @@ Find the node under **Phantom God / Model**.
 - Missing or incompatible enabled LoRAs produce a node execution error with the affected filename.
 
 
+
+### Responsive node controls (1.5.0)
+
+The Concatenate Text and Multi LoRA nodes use width-aware control layouts. Concatenate Text provides an individual enable/disable toggle and a separate delete button for every text field. Multi LoRA has no fixed row-count limit; the row list expands with the widget content. Both nodes refresh their layout on resize, with separate sizing behavior for Classic LiteGraph and Nodes 2.0.
+
 ### Environment Manager (Phantom God)
 
 Find the node under **Phantom God / System**. It inspects the active ComfyUI Python environment and lets you check, install, update, or repair Triton and SageAttention independently.
