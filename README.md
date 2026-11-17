@@ -2,7 +2,7 @@
 
 A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
 
-**Current version:** 1.5.3  
+**Current version:** 1.5.4  
 **Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
@@ -50,7 +50,7 @@ Find the node under **Phantom God / Model**.
 
 ### Node UI audit (1.5.2)
 
-The Concatenate Text and Multi LoRA controls use width-aware layouts and preserve ComfyUI's native multiline widget behavior. Concatenate Text has an individual ON/OFF toggle and a separate delete button for every field; OFF fields are excluded from the execution prompt, including linked inputs. Multi LoRA has no fixed row-count limit and hides its serialized JSON state in both Classic LiteGraph and Nodes 2.0. Environment Manager measures its live DOM content and stops polling when its node is removed.
+The Concatenate Text and Multi LoRA controls use width-aware layouts and preserve ComfyUI's native multiline widget behavior. Concatenate Text has an individual ON/OFF toggle and a separate delete button for every field; OFF fields are excluded from the execution prompt, including linked inputs. Multi LoRA has no fixed row-count limit, measures its live DOM content (including loading and error states), and hides its serialized JSON state in both Classic LiteGraph and Nodes 2.0. Environment Manager measures its live DOM content and stops polling when its node is removed.
 
 ### Environment Manager (Phantom God)
 
