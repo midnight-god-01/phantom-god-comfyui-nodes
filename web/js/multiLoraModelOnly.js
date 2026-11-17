@@ -327,8 +327,8 @@ function fitNode(node) {
     if (widget) {
         const height = contentHeight(node);
         widget.computeLayoutSize = () => ({
-            minHeight: height,
-            maxHeight: height,
+            minHeight: contentHeight(node),
+            maxHeight: contentHeight(node),
             minWidth: 280,
         });
         widget.options ??= {};
