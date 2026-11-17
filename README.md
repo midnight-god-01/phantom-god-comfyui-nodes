@@ -2,7 +2,7 @@
 
 A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
 
-**Current version:** 1.5.1  
+**Current version:** 1.5.2  
 **Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
@@ -36,7 +36,7 @@ The node returns a single STRING output.
 Find the node under **Phantom God / Model**.
 
 - Accepts one MODEL input and returns one modified MODEL output. It has no CLIP input or output.
-- Supports up to 64 ordered LoRA rows.
+- Supports any number of ordered LoRA rows; no UI or backend row cap is imposed.
 - Each row has its own file selector, strength value, ON/OFF control, and remove button.
 - The selector reads the available files from ComfyUI's LoRA model directory endpoint. Use **Refresh** after adding or removing model files while ComfyUI is running.
 - Enabled rows are applied sequentially in their displayed order. Disabled, unselected, and zero-strength rows are skipped.
@@ -48,9 +48,9 @@ Find the node under **Phantom God / Model**.
 
 
 
-### Responsive node controls (1.5.0)
+### Node UI audit (1.5.2)
 
-The Concatenate Text and Multi LoRA nodes use width-aware control layouts. Concatenate Text provides an individual enable/disable toggle and a separate delete button for every text field. Multi LoRA has no fixed row-count limit; the row list expands with the widget content. Both nodes refresh their layout on resize, with separate sizing behavior for Classic LiteGraph and Nodes 2.0.
+The Concatenate Text and Multi LoRA controls use width-aware layouts and preserve ComfyUI's native multiline widget behavior. Concatenate Text has an individual ON/OFF toggle and a separate delete button for every field; OFF fields are excluded from the execution prompt, including linked inputs. Multi LoRA has no fixed row-count limit and hides its serialized JSON state in both Classic LiteGraph and Nodes 2.0. Environment Manager measures its live DOM content and stops polling when its node is removed.
 
 ### Environment Manager (Phantom God)
 
@@ -58,7 +58,7 @@ Find the node under **Phantom God / System**. It inspects the active ComfyUI Pyt
 
 - Reports the exact Python executable, Python version, pip availability/version, PyTorch version, PyTorch CUDA runtime, CUDA availability, NVIDIA GPU, compute capability, and driver version when available.
 - Checks Triton against the PyTorch-compatible version line. On Windows it uses the `triton-windows` distribution; on Linux it uses the official `triton` distribution.
-- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It also checks the required Triton 3.0+ runtime. It uses the Comfy-Org wheel index and does not guess a nearby build.
+- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It also requires the exact Triton minor matched to the active PyTorch version, with a successful import. It uses the Comfy-Org wheel index and does not guess a nearby build.
 - Installs into the same Python executable that is running ComfyUI. Triton and SageAttention have separate install/update controls.
 - Does not upgrade, uninstall, or replace PyTorch or its dependencies. Installs use pip with dependency resolution disabled.
 - Requires a restart of ComfyUI after a successful installation before testing the package.
@@ -119,10 +119,12 @@ The repository keeps backend features, frontend extensions, and tests separate:
 ├── features/
 │   ├── __init__.py
 │   ├── concatenate_text.py
+│   ├── environment_manager.py
 │   └── multi_lora_model_only.py
 ├── web/
 │   └── js/
 │       ├── concatenateText.js
+│       ├── environmentManager.js
 │       ├── graphArrange.js
 │       └── multiLoraModelOnly.js
 ├── tests/
@@ -164,6 +166,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 node --check web/js/graphArrange.js
 node --check web/js/concatenateText.js
 node --check web/js/multiLoraModelOnly.js
+node --check web/js/environmentManager.js
 node --test
 ~~~~
 
