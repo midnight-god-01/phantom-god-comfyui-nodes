@@ -2,7 +2,7 @@
 
 A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
 
-**Current version:** 1.4.0  
+**Current version:** 1.5.1  
 **Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
