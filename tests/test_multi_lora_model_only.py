@@ -121,7 +121,12 @@ class MultiLoraNodeTests(unittest.TestCase):
             "comfy": package,
             "comfy.sd": sd,
             "comfy.utils": utils,
-        }):
+        }), patch("os.stat", return_value=types.SimpleNamespace(
+            st_size=100,
+            st_mtime=1.0,
+            st_mtime_ns=1_000_000_000,
+            st_ino=1,
+        )):
             node = PhantomGodMultiLoraModelOnly()
             utils.load_torch_file.side_effect = [(lora_a, metadata), (lora_b, metadata)]
             state = json.dumps({"loras": [
