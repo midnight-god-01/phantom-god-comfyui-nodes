@@ -463,14 +463,10 @@ def _sage_report(env):
         )
     else:
         result.update(status="Not installed", message=reason)
-    if not triton_ready and result.get("triton_note"):
-        result["message"] += " " + result["triton_note"]
     result["import_ok"], result["import_detail"] = _safe_import_status("sageattention") if installed else (False, None)
     if installed and not result["import_ok"]:
         result["status"] = "Import failed"
         result["message"] = "SageAttention is installed but cannot be imported: {}".format(result["import_detail"])
-        if result.get("triton_note"):
-            result["message"] += " " + result["triton_note"]
     return result
 
 
