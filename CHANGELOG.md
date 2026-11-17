@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-11-18
+
+- Added Environment Manager node to inspect the active ComfyUI Python, PyTorch, CUDA, GPU, and driver environment.
+- Added separate Triton and SageAttention compatibility checks, install/update controls, and job-status reporting.
+- Added PyTorch-matched Triton version selection for Windows and Linux.
+- Added exact Python/PyTorch/CUDA/platform wheel matching through the Comfy-Org SageAttention wheel index.
+- Installer uses the active ComfyUI Python executable, binary packages only, and disables dependency upgrades so it does not replace PyTorch.
+- Added backend compatibility tests and frontend validation coverage.
+
+
 ## 1.3.1 — 2026-11-18
 
 - Reload cached LoRA weights when a model file changes at the same path.
