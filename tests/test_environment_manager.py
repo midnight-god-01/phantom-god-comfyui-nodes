@@ -7,6 +7,7 @@ from features.environment_manager import (
     _sage_report,
     _select_sage_wheel,
     _triton_target,
+    PhantomGodEnvironmentManager,
     _version_sort_key,
 )
 
@@ -115,6 +116,43 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
         )
         self.assertIsNone(selected)
         self.assertIn("glibc 2.34", reason)
+    def test_sageattention_rejects_unsupported_compute_capability(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu128torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, reason = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.8",
+            "Windows", "AMD64", capability=(8, 5),
+        )
+        self.assertIsNone(selected)
+        self.assertIn("support NVIDIA compute capabilities", reason)
+
+    def test_sageattention_accepts_blackwell_compute_capability_12_1(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu128torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, _ = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.8",
+            "Windows", "AMD64", capability=(12, 1),
+        )
+        self.assertIsNotNone(selected)
+
+    def test_sageattention_rejects_cuda_11_even_if_a_matching_wheel_is_listed(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu118torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, reason = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "11.8",
+            "Windows", "AMD64", capability=(8, 6),
+        )
+        self.assertIsNone(selected)
+        self.assertIn("CUDA 12.0 or newer", reason)
+
+    def test_environment_manager_is_not_an_automatic_workflow_output(self):
+        self.assertFalse(PhantomGodEnvironmentManager.OUTPUT_NODE)
 
 class SageAttentionPrerequisiteTests(unittest.TestCase):
     def test_wheel_is_not_installable_without_pytorch_matched_triton(self):
