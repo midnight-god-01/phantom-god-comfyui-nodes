@@ -170,7 +170,7 @@ test("adds multiple independent LoRA rows with file and strength controls", asyn
 
     const hiddenState = node.widgets.find((widget) => widget.name === "LoraStackState");
     assert.equal(hiddenState.hidden, true);
-    assert.deepEqual(hiddenState.computeSize(), [0, -4]);
+    assert.deepEqual(Array.from(hiddenState.computeSize()), [0, -4]);
     assert.equal(hiddenState.options.canvasOnly, true);
 
     const root = node.__phantomGodLoraRoot;
