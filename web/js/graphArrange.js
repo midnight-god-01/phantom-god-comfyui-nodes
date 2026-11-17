@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 
 const EXTENSION_NAME = "PhantomGod.AutoArrangeGraph";
-const VERSION = "1.3.1";
+const VERSION = "1.4.0";
 const MARGIN = 50;
 const FALLBACK_TITLE_HEIGHT = 30;
 
