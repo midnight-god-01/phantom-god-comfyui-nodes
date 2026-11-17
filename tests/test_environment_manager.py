@@ -5,6 +5,7 @@ from features.environment_manager import (
     _parse_torch_tag,
     _select_sage_wheel,
     _triton_target,
+    _version_sort_key,
 )
 
 
@@ -22,6 +23,10 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
 
     def test_unknown_linux_triton_mapping_is_not_guessed(self):
         self.assertIsNone(_triton_target("2.15.0+cu130", "Linux"))
+
+    def test_post_release_sorts_after_base_version(self):
+        self.assertGreater(_version_sort_key("3.6.0.post2"), _version_sort_key("3.6.0"))
+        self.assertGreater(_version_sort_key("3.6.0.post10"), _version_sort_key("3.6.0.post2"))
 
     def test_torch_wheel_tags_accept_compact_and_dotted_versions(self):
         self.assertEqual(_parse_torch_tag("210"), (2, 10))
