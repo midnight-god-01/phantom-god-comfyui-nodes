@@ -298,33 +298,28 @@ function applyAdaptiveCanvasOnly(widget) {
 
 function contentHeight(node) {
     const count = readState(node).loras.length;
-    const root = node.__phantomGodLoraRoot;
-    if (root && root.isConnected) {
-        let height = 0;
-        for (const child of root.children) {
-            if (child.offsetParent === null) continue;
-            height += child.offsetHeight;
-        }
-        const style = window.getComputedStyle?.(root);
-        const gap = Number.parseFloat(style?.rowGap || style?.gap) || 0;
-        height += gap * Math.max(0, root.children.length - 1);
-        height += (Number.parseFloat(style?.paddingTop) || 0) + (Number.parseFloat(style?.paddingBottom) || 0);
-        if (height > 0) return Math.ceil(height);
-    }
-    return 48 + (count ? count * 42 : 38);
+    const toolbar = 32;
+    const rows = count ? count * 42 + (count - 1) * 6 : 38;
+    return 4 + toolbar + 9 + rows;
 }
 
 function fitNode(node) {
     const widget = node.__phantomGodLoraWidget;
     if (widget) {
+        const height = contentHeight(node);
         widget.computeLayoutSize = () => ({
-            minHeight: contentHeight(node),
-            minWidth: 250,
+            minHeight: height,
+            maxHeight: height,
+            minWidth: 280,
         });
         widget.options ??= {};
         widget.options.getMinHeight = () => contentHeight(node);
         widget.options.getMaxHeight = () => contentHeight(node);
     }
+
+    // Classic LiteGraph owns the serialized node size. Keep the user's width,
+    // but let height follow the full DOM content so rows are never clipped.
+    // Nodes 2.0 owns size in its Vue layout store; its DOM widget constraints apply.
     if (!window.LiteGraph?.vueNodesMode &&
         typeof node.computeSize === "function" &&
         typeof node.setSize === "function") {
@@ -341,8 +336,29 @@ function fitNode(node) {
     app.graph?.setDirtyCanvas?.(true, true);
 }
 
+function hideStateWidget(node) {
+    const widget = node.widgets?.find((item) => item.name === HIDDEN_INPUT);
+    if (!widget) return null;
+
+    // Keep the serialized value for graphToPrompt, but never display raw JSON.
+    // Nodes 2.0 needs canvasOnly in addition to hidden + zero-size.
+    widget.hidden = true;
+    widget.computeSize = () => [0, -4];
+    widget.options ??= {};
+    widget.options.hidden = true;
+    widget.options.canvasOnly = true;
+
+    const hideElement = () => {
+        const element = widget.element || widget.inputEl;
+        if (element?.style) element.style.display = "none";
+    };
+    hideElement();
+    globalThis.requestAnimationFrame?.(hideElement);
+    return widget;
+}
 
 function setupNode(node) {
+    hideStateWidget(node);
     if (node.__phantomGodLoraRoot || typeof node.addDOMWidget !== "function") return;
     injectStyles();
     const root = document.createElement("div");
@@ -357,7 +373,11 @@ function setupNode(node) {
         margin: 4,
         serialize: false,
     });
-    widget.computeLayoutSize = () => ({ minHeight: contentHeight(node), minWidth: 300 });
+    widget.computeLayoutSize = () => ({
+        minHeight: contentHeight(node),
+        maxHeight: contentHeight(node),
+        minWidth: 280,
+    });
     applyAdaptiveCanvasOnly(widget);
     node.__phantomGodLoraWidget = widget;
 
@@ -437,6 +457,7 @@ function patchNodeType(nodeType) {
     const originalOnConfigure = prototype.onConfigure;
     prototype.onConfigure = function (...args) {
         const result = originalOnConfigure?.apply(this, args);
+        hideStateWidget(this);
         renderNode(this);
         fitNode(this);
         return result;
