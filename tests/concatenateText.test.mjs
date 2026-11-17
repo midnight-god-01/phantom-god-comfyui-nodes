@@ -50,7 +50,20 @@ function loadExtension() {
     assert.notEqual(script, source);
     const extensions = [];
     const document = makeDocument();
-    const app = { graph: { setDirtyCanvas() {} }, registerExtension(extension) { extensions.push(extension); } };
+    const app = {
+        graph: { _nodes: [], setDirtyCanvas() {} },
+        async graphToPrompt() {
+            return {
+                output: {
+                    "1": {
+                        class_type: "PhantomGodConcatenateText",
+                        inputs: { text_1: "first", text_2: "second" },
+                    },
+                },
+            };
+        },
+        registerExtension(extension) { extensions.push(extension); },
+    };
     const ComfyWidgets = {
         STRING(node, name, spec) {
             const widget = {
@@ -65,7 +78,7 @@ function loadExtension() {
         window: { LiteGraph: { vueNodesMode: false } },
         console: { info() {}, error() {} },
     });
-    return { extension: extensions[0], document };
+    return { extension: extensions[0], document, app };
 }
 
 function makeNodeType() {
@@ -82,6 +95,7 @@ function makeNode(NodeType = makeNodeType()) {
         comfyClass: "PhantomGodConcatenateText",
         properties: {},
         size: [420, 300],
+        id: 1,
         widgets: [
             { name: "delimiter", value: " ", options: {} },
             { name: "text_1", value: "first", options: {}, computeSize(width) { return [width, 120]; } },
@@ -112,12 +126,13 @@ function makeNode(NodeType = makeNodeType()) {
 }
 
 function setupNode() {
-    const { extension, document } = loadExtension();
+    const { extension, document, app } = loadExtension();
     const NodeType = makeNodeType();
     extension.beforeRegisterNodeDef(NodeType, { name: "PhantomGodConcatenateText" });
     const node = makeNode(NodeType);
     node.onNodeCreated();
-    return { node, document };
+    app.graph._nodes = [node];
+    return { node, document, app };
 }
 
 test("registers the Concatenate Text frontend feature", () => {
@@ -144,6 +159,17 @@ test("Add Text creates a field and each field has an individual toggle", () => {
     assert.equal(node.__phantomGodTextControlRoot.children[1].children[2].children[1].textContent, "OFF");
     node.__phantomGodTextControlRoot.children[1].children[2].children[1].click();
     assert.equal(node.properties.phantomGodTextRemoveState["3"], undefined);
+});
+
+test("OFF toggles exclude text fields from workflow execution", async () => {
+    const { node, app } = setupNode();
+    const firstRow = node.__phantomGodTextControlRoot.children[1].children[0];
+    firstRow.children[1].click();
+    assert.equal(node.properties.phantomGodTextRemoveState["1"], true);
+
+    const prompt = await app.graphToPrompt();
+    assert.equal(prompt.output["1"].inputs.text_1, "");
+    assert.equal(prompt.output["1"].inputs.text_2, "second");
 });
 
 test("remove button deletes only its matching field", () => {
