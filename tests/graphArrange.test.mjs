@@ -121,6 +121,22 @@ test("float-right moves a node to the column of its earliest downstream use", ()
     assert.ok(lateConsumer.pos[0] > branchSource.pos[0]);
 });
 
+test("float-right preserves the zero execution level created for earliest downstream use", () => {
+    const extension = loadExtension();
+    const upstream = makeNode(1, "Upstream", 4, 200, 100, 1, 1);
+    const firstUse = makeNode(2, "PreviewImage", 1, 150, 90, 1, 0);
+    const graph = makeGraph([upstream, firstUse], [
+        { origin_id: 1, target_id: 2 },
+    ]);
+    const [, floatRight] = extension.getCanvasMenuItems({ graph });
+
+    floatRight.callback();
+
+    assert.equal(upstream._level, 0);
+    assert.equal(firstUse._level, 1);
+    assert.ok(upstream.pos[0] < firstUse.pos[0], "level zero must remain a separate upstream column");
+});
+
 test("float-right safely does nothing for an empty graph", () => {
     const extension = loadExtension();
     const graph = makeGraph([]);
