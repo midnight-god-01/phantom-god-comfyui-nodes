@@ -46,10 +46,13 @@ jobs:
           assert "PhantomGodConcatenateText" in module.NODE_CLASS_MAPPINGS
           assert module.NODE_DISPLAY_NAME_MAPPINGS["PhantomGodConcatenateText"] == "Concatenate Text (Phantom God)"
           assert "PhantomGodMultiLoraModelOnly" in module.NODE_CLASS_MAPPINGS
+          assert "PhantomGodEnvironmentManager" in module.NODE_CLASS_MAPPINGS
           assert module.NODE_DISPLAY_NAME_MAPPINGS["PhantomGodMultiLoraModelOnly"] == "Multi LoRA Loader (Model Only) (Phantom God)"
+          assert module.NODE_DISPLAY_NAME_MAPPINGS["PhantomGodEnvironmentManager"] == "Environment Manager (Phantom God)"
           assert (root / module.WEB_DIRECTORY / "graphArrange.js").is_file()
           assert (root / module.WEB_DIRECTORY / "concatenateText.js").is_file()
           assert (root / module.WEB_DIRECTORY / "multiLoraModelOnly.js").is_file()
+          assert (root / module.WEB_DIRECTORY / "environmentManager.js").is_file()
           PY
 
       - name: Run Python node tests
@@ -60,6 +63,7 @@ jobs:
           node --check web/js/graphArrange.js
           node --check web/js/concatenateText.js
           node --check web/js/multiLoraModelOnly.js
+          node --check web/js/environmentManager.js
 
       - name: Run frontend tests
         run: node --test
