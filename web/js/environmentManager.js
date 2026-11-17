@@ -66,6 +66,7 @@ function injectStyles() {
 function statusClass(status) {
     const value = String(status || "").toLowerCase();
     if (value === "up to date" || value === "completed") return "ok";
+    if (value.includes("prerequisite")) return "warn";
     if (value.includes("not installed") || value.includes("update") || value.includes("compatible") || value.includes("index unavailable")) return "warn";
     if (value.includes("blocked") || value.includes("unsupported") || value.includes("failed") || value.includes("conflict") || value.includes("import failed")) return "bad";
     return "";
@@ -128,6 +129,29 @@ function renderPackage(node, key, title, report) {
     return panel;
 }
 
+
+function environmentContentHeight(node) {
+    const root = node.__phantomGodEnvRoot;
+    if (!root) return 430;
+    const children = Array.from(root.children || []);
+    let height = children.reduce((sum, child) => sum + (Number(child.offsetHeight) || 0), 0);
+    const style = globalThis.getComputedStyle?.(root);
+    const gap = Number.parseFloat(style?.rowGap || style?.gap) || 9;
+    height += gap * Math.max(0, children.length - 1);
+    height += Number.parseFloat(style?.paddingTop) || 0;
+    height += Number.parseFloat(style?.paddingBottom) || 0;
+    return Math.max(430, Math.ceil(height || 0));
+}
+
+function updateEnvironmentLayout(node) {
+    const widget = node.__phantomGodEnvWidget;
+    if (!widget) return;
+    const minHeight = environmentContentHeight(node);
+    widget.computeLayoutSize = () => ({ minHeight, maxHeight: 900, minWidth: 390 });
+    widget.options.getMinHeight = () => environmentContentHeight(node);
+    widget.options.getMaxHeight = () => 900;
+}
+
 function render(node) {
     const root = node.__phantomGodEnvRoot;
     if (!root) return;
@@ -169,7 +193,9 @@ function render(node) {
     if (node.__phantomGodEnvError) {
         root.appendChild(element("div", "pg-env-message pg-env-error", node.__phantomGodEnvError));
     }
+    updateEnvironmentLayout(node);
     node.setDirtyCanvas?.(true, true);
+    app.graph?.setDirtyCanvas?.(true, true);
 }
 
 async function checkEnvironment(node) {
@@ -206,8 +232,10 @@ async function installPackage(node, packageName) {
         if (!response.ok) throw new Error(start.error || "Could not start installation.");
         const jobId = start.job_id;
         let finished = false;
-        for (let attempt = 0; attempt < 900; attempt += 1) {
+        for (let attempt = 0; attempt < 1260; attempt += 1) {
+            if (node.__phantomGodEnvRemoved) return;
             await new Promise((resolve) => setTimeout(resolve, 1500));
+            if (node.__phantomGodEnvRemoved) return;
             const jobResponse = await api.fetchApi("/phantom_god/environment/job/" + encodeURIComponent(jobId));
             const job = await jobResponse.json();
             if (!jobResponse.ok) throw new Error(job.error || "Could not read installation status.");
@@ -218,7 +246,7 @@ async function installPackage(node, packageName) {
                 break;
             }
         }
-        if (!finished) throw new Error("Installation status polling stopped after 22.5 minutes. Check the ComfyUI console and pip output.");
+        if (!finished) throw new Error("Installation status polling stopped after 31.5 minutes. Check the ComfyUI console and pip output.");
         if (node.__phantomGodEnvJob.state === "completed") {
             const checkResponse = await api.fetchApi("/phantom_god/environment/check", { method: "POST" });
             const data = await checkResponse.json();
@@ -237,6 +265,7 @@ function setupNode(node) {
     injectStyles();
     const root = element("div", "pg-env-root");
     node.__phantomGodEnvRoot = root;
+    node.__phantomGodEnvRemoved = false;
 
     const widget = node.addDOMWidget(WIDGET_NAME, "phantom_god_environment_manager", root, {
         getValue: () => "",
@@ -246,7 +275,7 @@ function setupNode(node) {
         margin: 5,
         serialize: false,
     });
-    widget.computeLayoutSize = () => ({ minHeight: 430, minWidth: 390 });
+    widget.computeLayoutSize = () => ({ minHeight: 430, maxHeight: 900, minWidth: 390 });
     node.__phantomGodEnvWidget = widget;
 
     if (!node.size || node.size[0] < 390) {
@@ -261,6 +290,7 @@ function patchNodeType(nodeType) {
     if (!prototype || prototype.__phantomGodEnvPatched) return;
     const originalRemoved = prototype.onRemoved;
     prototype.onRemoved = function (...args) {
+        this.__phantomGodEnvRemoved = true;
         this.__phantomGodEnvRoot?.remove?.();
         this.__phantomGodEnvRoot = null;
         return originalRemoved?.apply(this, args);
