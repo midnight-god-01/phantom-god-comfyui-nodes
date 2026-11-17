@@ -200,17 +200,16 @@ function injectStyles() {
     const style = document.createElement("style");
     style.id = "phantom-god-text-controls-style";
     style.textContent = [
-        ".pg-text-controls{display:flex;align-items:center;gap:7px;width:100%;min-width:0;box-sizing:border-box;overflow:hidden;font:12px sans-serif;}",
-        ".pg-text-controls button{box-sizing:border-box;white-space:nowrap;cursor:pointer;transition:background .12s,border-color .12s,color .12s;}",
-        ".pg-text-add{flex:0 0 auto;padding:6px 12px;border:1px solid var(--input-border,rgba(255,255,255,.18));border-radius:6px;background:var(--comfy-input-bg,#303030);color:var(--input-text,#eee);font-size:12px;}",
-        ".pg-text-add:hover{border-color:var(--p-primary,#888);background:var(--comfy-menu-bg,#3a3a3a);}",
+        ".pg-text-controls{display:flex;align-items:center;gap:7px;width:100%;min-width:0;box-sizing:border-box;overflow:hidden;color:var(--input-text,#eee);font:12px Inter,system-ui,sans-serif;}",
+        ".pg-text-controls button{box-sizing:border-box;white-space:nowrap;cursor:pointer;transition:background .14s,border-color .14s,color .14s;font:inherit;}",
+        ".pg-text-add{flex:0 0 auto;padding:7px 12px;border:1px solid var(--border-color,rgba(255,255,255,.16));border-radius:5px;background:var(--comfy-input-bg,#282828);color:var(--input-text,#eee);font-weight:600;}",
+        ".pg-text-add:hover{border-color:var(--p-primary,#8b9b9b);background:var(--comfy-menu-bg,#383838);}",
         ".pg-text-remove-list{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:thin;}",
-        ".pg-text-remove{flex:0 0 auto;padding:5px 8px;border:1px solid rgba(220,90,90,.38);border-radius:5px;background:rgba(150,45,45,.12);color:var(--input-text,#ddd);font-size:11px;}",
-        ".pg-text-remove:hover{border-color:#d66;background:rgba(170,50,50,.28);color:#fff;}",
+        ".pg-text-remove{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(220,90,90,.32);border-radius:4px;background:rgba(150,45,45,.1);color:var(--input-text,#ddd);font-size:11px;}",
+        ".pg-text-remove:hover{border-color:#d66;background:rgba(170,50,50,.25);color:#fff;}",
     ].join("");
     document.head.appendChild(style);
 }
-
 function installTextControls(node) {
     if (node.__phantomGodTextControls || typeof node.addDOMWidget !== "function") return;
 
