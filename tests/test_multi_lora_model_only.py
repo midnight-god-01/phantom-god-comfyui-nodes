@@ -5,7 +5,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from features.multi_lora_model_only import (
-    MAX_LORAS,
     PhantomGodMultiLoraModelOnly,
     _parse_state,
 )
@@ -56,9 +55,12 @@ class MultiLoraStateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _parse_state("{broken")
 
-    def test_rejects_too_many_rows(self):
-        with self.assertRaises(ValueError):
-            _parse_state({"loras": [{} for _ in range(MAX_LORAS + 1)]})
+    def test_accepts_more_than_the_previous_64_row_limit(self):
+        rows = _parse_state({"loras": [
+            {"name": "lora-{}.safetensors".format(index)}
+            for index in range(70)
+        ]})
+        self.assertEqual(len(rows), 70)
 
     def test_rejects_non_finite_strength(self):
         with self.assertRaises(ValueError):
