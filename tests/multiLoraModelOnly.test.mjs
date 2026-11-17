@@ -190,6 +190,33 @@ test("adds multiple independent LoRA rows with file and strength controls", asyn
     assert.equal(rows[1].on, true);
 });
 
+test("supports more than the previous 64 LoRA rows", async () => {
+    const { extension, app } = loadExtension();
+    const node = makeNode();
+    app.graph = { _nodes: [node], setDirtyCanvas() {} };
+    extension.nodeCreated(node);
+    await flushPromises();
+
+    const root = node.__phantomGodLoraRoot;
+    for (let i = 0; i < 70; i += 1) {
+        root.children[0].children[0].click();
+    }
+    assert.equal(readRows(node).length, 70);
+    assert.equal(root.children[0].children[2].textContent, "70 ACTIVE ROWS");
+});
+
+test("LoRA responsive rows remain fluid in narrow and wide nodes", async () => {
+    const { extension, app, document } = loadExtension();
+    const node = makeNode();
+    app.graph = { _nodes: [node], setDirtyCanvas() {} };
+    extension.nodeCreated(node);
+    await flushPromises();
+
+    const css = document.getElementById("phantom-god-multi-lora-style").textContent;
+    assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(54px,72px\) 44px 28px/);
+    assert.match(css, /width:100%;min-width:0/);
+});
+
 test("injects row state into the hidden ComfyUI prompt input", async () => {
     const { extension, app } = loadExtension();
     const node = makeNode();
