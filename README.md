@@ -46,6 +46,20 @@ Find the node under **Phantom God / Model**.
 - Changes to a LoRA file at the same path are detected using its file signature; the cached state dictionary is reloaded when the file changes.
 - Missing or incompatible enabled LoRAs produce a node execution error with the affected filename.
 
+
+### Environment Manager (Phantom God)
+
+Find the node under **Phantom God / System**. It inspects the active ComfyUI Python environment and lets you check, install, update, or repair Triton and SageAttention independently.
+
+- Reports the exact Python executable, Python version, PyTorch version, PyTorch CUDA runtime, CUDA availability, NVIDIA GPU, compute capability, and driver version when available.
+- Checks Triton against the PyTorch-compatible version line. On Windows it uses the `triton-windows` distribution; on Linux it uses the official `triton` distribution.
+- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It uses the Comfy-Org wheel index and does not guess a nearby build.
+- Installs into the same Python executable that is running ComfyUI. Triton and SageAttention have separate install/update controls.
+- Does not upgrade, uninstall, or replace PyTorch or its dependencies. Installs use pip with dependency resolution disabled.
+- Requires a restart of ComfyUI after a successful installation before testing the package.
+
+The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels require an Ampere-class or newer GPU (compute capability 8.0+). If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build.
+
 ## Installation
 
 1. Close ComfyUI.
