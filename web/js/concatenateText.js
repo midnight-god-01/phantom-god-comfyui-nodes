@@ -6,8 +6,6 @@ const NODE_TYPE = "PhantomGodConcatenateText";
 const TEXT_INPUT_NAME = /^text_(\d+)$/;
 const CONTROL_WIDGET_NAME = "text_controls";
 const ADD_BUTTON_NAME = "Add Text";
-const MIN_NODE_WIDTH = 300;
-const ROW_HEIGHT = 29;
 
 function isTextInputName(name) {
     const match = TEXT_INPUT_NAME.exec(name ?? "");
@@ -81,10 +79,6 @@ function ensureTextWidget(node, index, defaultValue = "") {
     widget.options.multiline = true;
     widget.options.placeholder = "Text " + index;
     widget.label = "Text " + index;
-    widget.computeSize = function (width) {
-        const available = Math.max(140, Number(width) || Number(node.size?.[0]) - 32 || 280);
-        return [available, ROW_HEIGHT];
-    };
     moveWidgetBeforeControls(node, widget);
     return widget;
 }
@@ -138,24 +132,18 @@ function createButton(text, className, title, callback) {
     return item;
 }
 
-function nodeWidth(node) {
-    return Math.max(MIN_NODE_WIDTH, Number(node.size?.[0]) || 360);
-}
-
-function updateWidgetWidths(node) {
-    const width = nodeWidth(node);
-    for (const index of getTextInputIndices(node.inputs)) {
-        const widget = node.widgets?.find((candidate) => candidate.name === "text_" + index);
-        if (widget) widget.computeSize = () => [Math.max(140, width - 34), ROW_HEIGHT];
-    }
+function updateControlLayout(node) {
     const dom = node.__phantomGodTextControls;
-    if (dom) {
-        dom.computeLayoutSize = () => ({
-            minHeight: 43,
-            minWidth: 160,
-            preferredHeight: 43,
-        });
-    }
+    if (!dom) return;
+    const count = getTextInputIndices(node.inputs).length;
+    const height = 55 + count * 37;
+    dom.computeLayoutSize = () => ({
+        minHeight: height,
+        maxHeight: height,
+        minWidth: 160,
+    });
+    dom.options.getMinHeight = () => height;
+    dom.options.getMaxHeight = () => height;
 }
 
 function renderTextControls(node) {
@@ -227,7 +215,7 @@ function element(tag, className, text) {
 }
 
 function refreshNode(node) {
-    updateWidgetWidths(node);
+    updateControlLayout(node);
     node.setDirtyCanvas?.(true, true);
     app.graph?.setDirtyCanvas?.(true, true);
 }
@@ -311,7 +299,7 @@ function installTextControls(node) {
     node.__phantomGodTextControls = widget;
     applyAdaptiveCanvasOnly(widget);
     renderTextControls(node);
-    updateWidgetWidths(node);
+    updateControlLayout(node);
 }
 
 function reconcileTextFields(node, workflowNode) {
