@@ -19,13 +19,31 @@ Find **Concatenate Text (Phantom God)** under **Phantom God / Text**.
 
 - Starts with two multiline text fields.
 - Click **Add Text** to add as many more fields as needed.
+- The Add Text control has rounded corners and matching text-field labels/placeholders such as **Text 3**.
 - Every text field can be typed into or connected to another ComfyUI STRING output.
+- Use the matching **× Text N** control to remove any individual field, including either of the initial two fields.
+- All text fields are optional, so removing every text field does not leave a required-input validation error.
 - Set a custom delimiter. The default is one space; commas, pipes, and newline separators work too.
 - Fields are concatenated in numeric order: text_1, text_2, text_3, and so on.
 - Empty fields are skipped, so they do not create duplicate delimiters.
-- Dynamic fields restore by widget name on recent frontends and fall back to positional values for older workflow files.
+- Remaining dynamic fields restore by widget name on recent frontends and fall back to positional values for older workflow files.
 
 The node returns one STRING output.
+
+### Multi LoRA Loader (Model Only) (Phantom God)
+
+Find **Multi LoRA Loader (Model Only) (Phantom God)** under **Phantom God / Model**.
+
+- Connect one **MODEL** input and receive one modified **MODEL** output.
+- There is deliberately no CLIP input or CLIP output. This node applies LoRAs to the diffusion model only.
+- Click **＋ Add LoRA** to add up to 64 rows.
+- Each row has its own LoRA file picker, strength control, **ON/OFF** toggle, and **×** remove button.
+- The file picker is populated from ComfyUI's current `/models/loras` endpoint. Use the refresh button after adding or removing LoRA files while ComfyUI is running.
+- Rows are applied in their displayed order. Disabled, blank, and zero-strength rows are skipped.
+- Strength supports negative and positive values from -100 to 100.
+- The selected files, strengths, toggles, and row order are saved with the workflow.
+- The backend uses ComfyUI's `comfy.utils.load_torch_file` and `comfy.sd.load_lora_for_models` APIs. It keeps only one raw LoRA state dictionary cached at a time rather than retaining a full stack of large tensors in node memory.
+- A missing or incompatible enabled LoRA produces a clear node execution error instead of silently returning an unchanged model.
 
 ## Install
 
@@ -85,6 +103,7 @@ python -m py_compile __init__.py features/*.py
 python -m unittest discover -s tests -p 'test_*.py'
 node --check web/js/graphArrange.js
 node --check web/js/concatenateText.js
+node --check web/js/multiLoraModelOnly.js
 node --test
 ~~~~
 
@@ -94,7 +113,9 @@ GitHub Actions runs the Python and JavaScript checks on pushes and pull requests
 
 The package targets ComfyUI v0.45.0 and newer. The current compatibility audit checked core v0.45.0 with its bundled frontend 1.58.5, plus standalone frontend 1.61.2. The Python entry point exports NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, and WEB_DIRECTORY = "./web/js". Python node definitions are loaded from features/; frontend extension files are loaded from web/js/.
 
-The Concatenate Text backend accepts explicitly defined text_1 and text_2 inputs plus validated dynamic text_N inputs. Its frontend extension adds matching multiline widgets and STRING sockets, restores those fields from saved workflows, and supplies the Add Text button. The backend's optional-input mapping follows ComfyUI's documented dynamic-input pattern.
+Concatenate Text uses an optional-input mapping that accepts dynamically named STRING inputs. Its frontend adds/removes the matching widget and socket together, and restores the remaining text widget values when a workflow is reopened.
+
+Multi LoRA Loader stores its UI state in node properties and injects that state into a hidden STRING input during graphToPrompt. The Python backend applies enabled LoRAs sequentially to MODEL using ComfyUI's model patching API and passes no CLIP object to the loader API.
 
 Auto Arrange Graph continues to use ComfyUI's app.registerExtension() and getCanvasMenuItems() APIs. It does not patch LGraphCanvas prototypes or import deprecated /scripts/ui.js APIs.
 
@@ -105,7 +126,8 @@ Auto Arrange Graph continues to use ComfyUI's app.registerExtension() and getCan
 3. Hard-refresh the browser after the server restarts.
 4. Confirm the ComfyUI startup log contains no import error for phantom-god-comfyui-nodes.
 5. Open the browser developer console and check for [Phantom God] messages from the frontend extensions.
-6. Auto Arrange Graph commands appear when right-clicking an empty canvas area. The Concatenate Text node appears in the node search under Phantom God / Text.
+6. Auto Arrange Graph commands appear when right-clicking an empty canvas area. Concatenate Text appears under Phantom God / Text. Multi LoRA Loader appears under Phantom God / Model.
+7. If the LoRA dropdown is stale after copying a new model file, use its refresh button. Ensure the LoRA is inside one of ComfyUI's configured `loras` model directories.
 
 ## Source and attribution
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — 2026-11-18
+
+- Added Multi LoRA Loader (Model Only): up to 64 individually selectable LoRAs, each with its own strength, enable toggle, and remove control.
+- Added model-only LoRA application through ComfyUI's official model patching API, without CLIP inputs or outputs.
+- Added workflow-persisted LoRA row state, live LoRA file listing, list refresh, and file-change cache invalidation.
+- Reworked Concatenate Text controls with a rounded Add Text button and per-field remove controls.
+- Made every Concatenate Text field optional so any individual field, including the first two, can be removed safely.
+- Standardized dynamically added text placeholders and labels to "Text N".
+- Added Python and frontend regression tests for LoRA stacking, independent toggles, workflow prompt injection, and row removal.
+
 ## 1.2.1 — 2026-11-18
 
 - Fixed dynamic backend input schema lookup for ComfyUI's membership-plus-index access pattern.

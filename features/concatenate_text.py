@@ -1,4 +1,4 @@
-"""Unlimited-input text concatenation node."""
+"""Unlimited-input text concatenation node with removable fields."""
 
 import re
 
@@ -6,19 +6,23 @@ _DYNAMIC_TEXT_INPUT = re.compile(r"^text_(\d+)$")
 
 
 class _DynamicTextInputs(dict):
-    """Accept additional text_N inputs created by the frontend extension."""
+    """Declare the first two optional inputs and accept later text_N fields."""
+
+    def __init__(self):
+        schema = ("STRING", {"default": "", "multiline": True})
+        super().__init__({"text_1": schema, "text_2": schema})
 
     def __contains__(self, key):
         if not isinstance(key, str):
             return False
         match = _DYNAMIC_TEXT_INPUT.fullmatch(key)
-        return match is not None and int(match.group(1)) > 2
+        return match is not None and int(match.group(1)) >= 1
 
     def __missing__(self, key):
         # ComfyUI's get_input_info() checks membership and then indexes the
-        # optional mapping. Supply a STRING schema for dynamically named inputs.
+        # optional mapping. Dynamic names therefore need a real schema value.
         if key in self:
-            return ("STRING", {})
+            return ("STRING", {"default": "", "multiline": True})
         raise KeyError(key)
 
 
@@ -30,8 +34,6 @@ class PhantomGodConcatenateText:
         return {
             "required": {
                 "delimiter": ("STRING", {"default": " ", "multiline": False}),
-                "text_1": ("STRING", {"default": "", "multiline": True}),
-                "text_2": ("STRING", {"default": "", "multiline": True}),
             },
             "optional": _DynamicTextInputs(),
         }
@@ -40,18 +42,20 @@ class PhantomGodConcatenateText:
     RETURN_NAMES = ("text",)
     FUNCTION = "concatenate"
     CATEGORY = "Phantom God/Text"
+    DESCRIPTION = (
+        "Join any number of text fields. Add fields as needed and remove an "
+        "individual field with its matching remove control. Every field is optional."
+    )
 
     def concatenate(self, delimiter=" ", text_1="", text_2="", **dynamic_inputs):
-        """Concatenate text_1, text_2, and dynamically named text_N values."""
+        """Concatenate any supplied text_N values in numeric order."""
         values = {1: text_1, 2: text_2}
 
         for name, value in dynamic_inputs.items():
             match = _DYNAMIC_TEXT_INPUT.fullmatch(name)
             if match is None:
                 continue
-            index = int(match.group(1))
-            if index > 2:
-                values[index] = value
+            values[int(match.group(1))] = value
 
         pieces = []
         for index in sorted(values):

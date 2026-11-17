@@ -52,19 +52,29 @@ class ConcatenateTextTests(unittest.TestCase):
             ("line one\nline two\nline three",),
         )
 
-    def test_dynamic_schema_accepts_only_extra_text_fields(self):
-        optional = PhantomGodConcatenateText.INPUT_TYPES()["optional"]
+    def test_all_text_fields_are_optional_and_removable(self):
+        inputs = PhantomGodConcatenateText.INPUT_TYPES()
+        optional = inputs["optional"]
+        self.assertEqual(set(inputs["required"]), {"delimiter"})
+        self.assertIn("text_1", optional)
+        self.assertIn("text_2", optional)
         self.assertIn("text_3", optional)
         self.assertIn("text_100", optional)
-        self.assertNotIn("not_a_text_field", optional)
-        self.assertNotIn("text_1", optional)
 
     def test_dynamic_input_lookup_returns_a_string_schema(self):
         optional = PhantomGodConcatenateText.INPUT_TYPES()["optional"]
-        self.assertEqual(optional["text_3"], ("STRING", {}))
-        self.assertEqual(optional["text_100"], ("STRING", {}))
+        expected = ("STRING", {"default": "", "multiline": True})
+        self.assertEqual(optional["text_3"], expected)
+        self.assertEqual(optional["text_100"], expected)
         with self.assertRaises(KeyError):
             optional["not_a_text_field"]
+
+    def test_removed_fields_can_be_omitted_from_execution(self):
+        self.assertEqual(
+            self.node.concatenate(delimiter=", ", text_2="second", text_4="fourth"),
+            ("second, fourth",),
+        )
+        self.assertEqual(self.node.concatenate(delimiter=","), ("",))
 
     def test_exports_node_mapping(self):
         self.assertIs(
