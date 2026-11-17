@@ -144,7 +144,9 @@ test("disables SageAttention installation when Triton prerequisite is missing", 
     assert.equal(triton.children[0].children[1].textContent, "Up to date");
     assert.equal(triton.children[3].children[1].disabled, false);
     assert.equal(sage.children[0].children[1].textContent, "Prerequisite missing");
-    assert.equal(sage.children[4].children[1].disabled, true);
+    const sageActions = sage.children.find((child) => child.className === "pg-env-actions");
+    assert.ok(sageActions);
+    assert.equal(sageActions.children[1].disabled, true);
     assert.match(sage.children[1].textContent, /Triton build is required/);
 });
 
