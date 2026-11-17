@@ -8,6 +8,7 @@
 - Required an importable Triton version matching the active PyTorch compatibility line before enabling SageAttention installation.
 - Added the verified PyTorch 2.15 → Triton 3.9 pairing for Linux.
 - Made Environment Manager layout content-aware, aligned its install polling window with the backend timeout, and stopped client polling when its node is removed.
+- Preserved execution level zero when arranging upstream nodes into separate columns; added a regression test for the first-use edge case.
 - Added regression tests for execution toggles, package prerequisites, live layout sizing, and node cleanup.
 - Updated README feature inventory, supported LoRA row count, development file tree, and validation commands.
 
