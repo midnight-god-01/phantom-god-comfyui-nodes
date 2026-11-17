@@ -121,8 +121,8 @@ function renderPackage(node, key, title, report) {
     actions.appendChild(button("Check", "pg-env-button", () => checkEnvironment(node)));
     const installLabel = info.installed ? "Update / Repair" : "Install";
     const install = button(installLabel, "pg-env-button pg-env-primary", () => installPackage(node, key));
-    install.disabled = !info.supported || Boolean(node.__phantomGodEnvBusy);
-    install.title = info.supported ? "Install a build selected for this environment" : "Resolve the environment compatibility blockers first";
+    install.disabled = !info.supported || !report?.environment?.pip_available || Boolean(node.__phantomGodEnvBusy);
+    install.title = !report?.environment?.pip_available ? "pip is not available in this ComfyUI Python environment" : (info.supported ? "Install a build selected for this environment" : "Resolve the environment compatibility blockers first");
     actions.appendChild(install);
     panel.appendChild(actions);
     return panel;
