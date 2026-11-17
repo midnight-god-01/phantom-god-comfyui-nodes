@@ -3,7 +3,7 @@
 ## 1.5.3 — 2026-11-18
 
 - Prevented Environment Manager from running environment scans automatically as a workflow output; checks remain available through its explicit UI action or when its STRING output is connected.
-- Restricted SageAttention wheel matching to the compute capabilities published by the upstream build and CUDA 12.0 or newer.
+- Restricted SageAttention wheel matching to the compute capabilities published by the upstream build and enforced GPU-specific CUDA minimums: 12.0 for Ampere, 12.4 for Ada, 12.3 for Hopper, and 12.8 for Blackwell.
 - Added regression tests for unsupported GPU architectures, CUDA minimum version, and manual-only Environment Manager execution.
 
 
