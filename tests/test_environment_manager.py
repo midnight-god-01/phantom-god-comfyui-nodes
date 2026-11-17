@@ -130,10 +130,7 @@ class SageAttentionPrerequisiteTests(unittest.TestCase):
             "machine": "AMD64",
             "capability": [8, 6],
         }
-        with patch("features.environment_manager._load_sage_wheels", return_value=([wheel], None)), \\
-             patch("features.environment_manager._select_sage_wheel", return_value=(wheel, "Exact match")), \\
-             patch("features.environment_manager._distribution_version", side_effect=lambda name: "2.2.0+cu130torch214" if name == "sageattention" else None), \\
-             patch("features.environment_manager._safe_import_status", return_value=(True, None)):
+        with patch("features.environment_manager._load_sage_wheels", return_value=([wheel], None)), patch("features.environment_manager._select_sage_wheel", return_value=(wheel, "Exact match")), patch("features.environment_manager._distribution_version", side_effect=lambda name: "2.2.0+cu130torch214" if name == "sageattention" else None), patch("features.environment_manager._safe_import_status", return_value=(True, None)):
             report = _sage_report(env)
 
         self.assertFalse(report["supported"])
@@ -156,10 +153,7 @@ class SageAttentionPrerequisiteTests(unittest.TestCase):
         }
         def package_version(name):
             return {"sageattention": wheel["version"], "triton-windows": "3.7.1"}.get(name)
-        with patch("features.environment_manager._load_sage_wheels", return_value=([wheel], None)), \\
-             patch("features.environment_manager._select_sage_wheel", return_value=(wheel, "Exact match")), \\
-             patch("features.environment_manager._distribution_version", side_effect=package_version), \\
-             patch("features.environment_manager._safe_import_status", return_value=(True, None)):
+        with patch("features.environment_manager._load_sage_wheels", return_value=([wheel], None)), patch("features.environment_manager._select_sage_wheel", return_value=(wheel, "Exact match")), patch("features.environment_manager._distribution_version", side_effect=package_version), patch("features.environment_manager._safe_import_status", return_value=(True, None)):
             report = _sage_report(env)
 
         self.assertFalse(report["supported"])
