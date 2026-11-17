@@ -14,6 +14,13 @@ class _DynamicTextInputs(dict):
         match = _DYNAMIC_TEXT_INPUT.fullmatch(key)
         return match is not None and int(match.group(1)) > 2
 
+    def __missing__(self, key):
+        # ComfyUI's get_input_info() checks membership and then indexes the
+        # optional mapping. Supply a STRING schema for dynamically named inputs.
+        if key in self:
+            return ("STRING", {})
+        raise KeyError(key)
+
 
 class PhantomGodConcatenateText:
     """Join any number of text fields using a configurable delimiter."""

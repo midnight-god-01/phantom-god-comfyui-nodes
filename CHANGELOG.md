@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1 — 2026-11-18
+
+- Fixed dynamic backend input schema lookup for ComfyUI's membership-plus-index access pattern.
+- Restored dynamic widget values by name on recent frontends, with positional fallback for older workflows.
+- Kept the Add Text control label stable after workflow restoration.
+- Added regression tests for dynamic input lookup and both workflow restoration formats.
+- Audited extension hooks and widget constructors against ComfyUI v0.45.0 with bundled frontend 1.58.5 and standalone frontend 1.61.2.
+
 ## 1.2.0 — 2026-11-17
 
 - Added the draggable Concatenate Text (Phantom God) backend node.

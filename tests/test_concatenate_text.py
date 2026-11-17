@@ -59,6 +59,13 @@ class ConcatenateTextTests(unittest.TestCase):
         self.assertNotIn("not_a_text_field", optional)
         self.assertNotIn("text_1", optional)
 
+    def test_dynamic_input_lookup_returns_a_string_schema(self):
+        optional = PhantomGodConcatenateText.INPUT_TYPES()["optional"]
+        self.assertEqual(optional["text_3"], ("STRING", {}))
+        self.assertEqual(optional["text_100"], ("STRING", {}))
+        with self.assertRaises(KeyError):
+            optional["not_a_text_field"]
+
     def test_exports_node_mapping(self):
         self.assertIs(
             NODE_CLASS_MAPPINGS["PhantomGodConcatenateText"],

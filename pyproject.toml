@@ -1,6 +1,6 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.2.0"
+version = "1.2.1"
 description = "Modular ComfyUI custom-node pack with frontend extensions and backend nodes."
 readme = "README.md"
 license = "MIT"

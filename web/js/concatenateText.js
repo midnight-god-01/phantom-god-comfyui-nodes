@@ -121,12 +121,23 @@ function installAddButton(node) {
 function restoreDynamicFields(node, workflowNode) {
     const indices = getDynamicInputIndices(workflowNode?.inputs ?? node.inputs);
     const savedValues = workflowNode?.widgets_values ?? [];
+    const namedValues = workflowNode?.widgets_values_named ?? {};
 
     indices.forEach((index, position) => {
-        const savedValue = savedValues[STATIC_WIDGET_COUNT + position] ?? "";
+        const name = "text_" + index;
+        const hasNamedValue = Object.prototype.hasOwnProperty.call(namedValues, name);
+        const savedValue = hasNamedValue
+            ? namedValues[name]
+            : (savedValues[STATIC_WIDGET_COUNT + position] ?? "");
         const widget = ensureTextField(node, index, savedValue);
         widget.value = savedValue;
     });
+
+    // The Add Text control is UI-only and is intentionally not serialized.
+    // Keep its label intact even with older workflow restorers.
+    if (node.__phantomGodAddTextButton) {
+        node.__phantomGodAddTextButton.value = ADD_BUTTON_NAME;
+    }
 
     refreshNode(node);
 }

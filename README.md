@@ -23,7 +23,7 @@ Find **Concatenate Text (Phantom God)** under **Phantom God / Text**.
 - Set a custom delimiter. The default is one space; commas, pipes, and newline separators work too.
 - Fields are concatenated in numeric order: text_1, text_2, text_3, and so on.
 - Empty fields are skipped, so they do not create duplicate delimiters.
-- Dynamic fields and their values are restored when a workflow is reopened.
+- Dynamic fields restore by widget name on recent frontends and fall back to positional values for older workflow files.
 
 The node returns one STRING output.
 
@@ -92,7 +92,7 @@ GitHub Actions runs the Python and JavaScript checks on pushes and pull requests
 
 ## Compatibility and implementation
 
-The package supports ComfyUI v0.45.0 and newer. The Python entry point exports NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, and WEB_DIRECTORY = "./web/js". Python node definitions are loaded from features/; frontend extension files are loaded from web/js/.
+The package targets ComfyUI v0.45.0 and newer. The current compatibility audit checked core v0.45.0 with its bundled frontend 1.58.5, plus standalone frontend 1.61.2. The Python entry point exports NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, and WEB_DIRECTORY = "./web/js". Python node definitions are loaded from features/; frontend extension files are loaded from web/js/.
 
 The Concatenate Text backend accepts explicitly defined text_1 and text_2 inputs plus validated dynamic text_N inputs. Its frontend extension adds matching multiline widgets and STRING sockets, restores those fields from saved workflows, and supplies the Add Text button. The backend's optional-input mapping follows ComfyUI's documented dynamic-input pattern.
 
