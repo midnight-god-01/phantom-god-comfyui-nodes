@@ -192,6 +192,7 @@ function renderNode(node) {
         empty.className = "pg-lora-empty";
         empty.textContent = "No LoRAs added. Click Add LoRA to create your first row.";
         rows.appendChild(empty);
+        fitNode(node);
         return;
     }
 
@@ -270,6 +271,7 @@ function renderNode(node) {
         line.appendChild(remove);
         rows.appendChild(line);
     }
+    fitNode(node);
 }
 
 function showError(node, error) {
@@ -279,6 +281,7 @@ function showError(node, error) {
     message.className = "pg-lora-error";
     message.textContent = error?.message || String(error);
     root.appendChild(message);
+    fitNode(node);
 }
 
 function applyAdaptiveCanvasOnly(widget) {
@@ -300,7 +303,23 @@ function contentHeight(node) {
     const count = readState(node).loras.length;
     const toolbar = 32;
     const rows = count ? count * 42 + (count - 1) * 6 : 38;
-    return 4 + toolbar + 9 + rows;
+    const fallback = 4 + toolbar + 9 + rows;
+    const root = node.__phantomGodLoraRoot;
+    if (!root?.isConnected || !root.children?.length) return fallback;
+
+    // Measure the actual rendered DOM so loading indicators and error messages
+    // are included, and wrapped controls cannot be clipped by an estimated row.
+    const children = Array.from(root.children);
+    let height = children.reduce(
+        (sum, child) => sum + (Number(child.offsetHeight) || 0),
+        0,
+    );
+    const style = globalThis.getComputedStyle?.(root);
+    const gap = Number.parseFloat(style?.rowGap || style?.gap) || 9;
+    height += gap * Math.max(0, children.length - 1);
+    height += Number.parseFloat(style?.paddingTop) || 0;
+    height += Number.parseFloat(style?.paddingBottom) || 0;
+    return height > 0 ? Math.max(fallback, Math.ceil(height)) : fallback;
 }
 
 function fitNode(node) {
