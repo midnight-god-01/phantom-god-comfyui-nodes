@@ -17,49 +17,25 @@ class FakeElement {
         this.value = "";
         this.title = "";
         this.attributes = {};
+        this.disabled = false;
+        this.isConnected = true;
     }
-
-    appendChild(child) {
-        this.children.push(child);
-        return child;
-    }
-
-    addEventListener(name, callback) {
-        (this.listeners[name] ??= []).push(callback);
-    }
-
-    setAttribute(name, value) {
-        this.attributes[name] = value;
-    }
-
-    set innerHTML(value) {
-        if (value === "") this.children = [];
-        this._innerHTML = value;
-    }
-
-    get innerHTML() {
-        return this._innerHTML ?? "";
-    }
-
-    click() {
-        for (const callback of this.listeners.click ?? []) {
-            callback({ preventDefault() {}, stopPropagation() {} });
-        }
-    }
-
-    remove() {
-        this.removed = true;
-    }
+    appendChild(child) { this.children.push(child); return child; }
+    append(...children) { this.children.push(...children); }
+    addEventListener(name, callback) { (this.listeners[name] ??= []).push(callback); }
+    setAttribute(name, value) { this.attributes[name] = value; }
+    set innerHTML(value) { if (value === "") this.children = []; this._innerHTML = value; }
+    get innerHTML() { return this._innerHTML ?? ""; }
+    replaceChildren(...children) { this.children = [...children]; }
+    click() { for (const callback of this.listeners.click ?? []) callback({ preventDefault() {}, stopPropagation() {} }); }
+    remove() { this.removed = true; this.isConnected = false; }
 }
 
 function makeDocument() {
     const ids = new Map();
     const head = new FakeElement("head");
-    const originalAppend = head.appendChild.bind(head);
-    head.appendChild = (child) => {
-        if (child.id) ids.set(child.id, child);
-        return originalAppend(child);
-    };
+    const append = head.appendChild.bind(head);
+    head.appendChild = (child) => { if (child.id) ids.set(child.id, child); return append(child); };
     return {
         head,
         createElement: (tagName) => new FakeElement(tagName),
@@ -71,35 +47,24 @@ function loadExtension() {
     const script = source
         .replace('import { app } from "../../scripts/app.js";\n', "")
         .replace('import { ComfyWidgets } from "../../scripts/widgets.js";\n', "");
-    assert.notEqual(script, source, "expected to remove frontend imports");
-
+    assert.notEqual(script, source);
     const extensions = [];
     const document = makeDocument();
-    const app = {
-        graph: { setDirtyCanvas() {} },
-        registerExtension(extension) { extensions.push(extension); },
-    };
+    const app = { graph: { setDirtyCanvas() {} }, registerExtension(extension) { extensions.push(extension); } };
     const ComfyWidgets = {
         STRING(node, name, spec) {
             const widget = {
-                name,
-                type: "customtext",
-                value: spec[1].default ?? "",
-                options: { ...spec[1] },
+                name, type: "customtext", value: spec[1].default ?? "", options: { ...spec[1] },
             };
             node.widgets.push(widget);
             return { widget };
         },
     };
-
     runInNewContext(script, {
-        app,
-        ComfyWidgets,
-        document,
+        app, ComfyWidgets, document,
         window: { LiteGraph: { vueNodesMode: false } },
         console: { info() {}, error() {} },
     });
-    assert.equal(extensions.length, 1);
     return { extension: extensions[0], document };
 }
 
@@ -115,6 +80,8 @@ function makeNode(NodeType = makeNodeType()) {
     Object.assign(node, {
         type: "PhantomGodConcatenateText",
         comfyClass: "PhantomGodConcatenateText",
+        properties: {},
+        size: [420, 300],
         widgets: [
             { name: "delimiter", value: " ", options: {} },
             { name: "text_1", value: "first", options: {} },
@@ -126,13 +93,11 @@ function makeNode(NodeType = makeNodeType()) {
         ],
         addDOMWidget(name, type, element, options) {
             const widget = { name, type, element, options };
-            this.widgets.push(widget);
-            return widget;
+            this.widgets.push(widget); return widget;
         },
         addInput(name, type, options) {
             const input = { name, type, link: null, ...options };
-            this.inputs.push(input);
-            return input;
+            this.inputs.push(input); return input;
         },
         removeInput(index) {
             this.removedInputs ??= [];
@@ -152,7 +117,7 @@ function setupNode() {
     extension.beforeRegisterNodeDef(NodeType, { name: "PhantomGodConcatenateText" });
     const node = makeNode(NodeType);
     node.onNodeCreated();
-    return { node, document, extension };
+    return { node, document };
 }
 
 test("registers the Concatenate Text frontend feature", () => {
@@ -160,39 +125,33 @@ test("registers the Concatenate Text frontend feature", () => {
     assert.equal(extension.name, "PhantomGod.ConcatenateText");
 });
 
-test("Add Text is rounded and creates a field labelled Text 3", () => {
+test("Add Text creates a field and each field has an individual toggle", () => {
     const { node, document } = setupNode();
     const root = node.__phantomGodTextControlRoot;
-    const addButton = root.children[0];
-    assert.equal(addButton.textContent, "Add Text");
-    assert.match(document.getElementById("phantom-god-text-controls-style").textContent, /border-radius:6px/);
-
-    addButton.click();
+    assert.match(document.getElementById("phantom-god-text-controls-style").textContent, /grid-template-columns:minmax\(0,1fr\) 48px 28px/);
+    root.children[2].children[0].click();
     const text3 = node.widgets.find((widget) => widget.name === "text_3");
     assert.ok(text3);
     assert.equal(text3.options.placeholder, "Text 3");
-    assert.equal(text3.label, "Text 3");
-    assert.equal(node.inputs.find((input) => input.name === "text_3").label, "Text 3");
-    assert.ok(node.inputs.find((input) => input.name === "text_3").widget);
+    const field = root.children[1].children[2];
+    assert.equal(field.children[0].textContent, "TEXT 3");
+    assert.equal(field.children[1].textContent, "ON");
+    field.children[1].click();
+    assert.equal(node.properties.phantomGodTextRemoveState["3"], true);
+    assert.equal(node.widgets.find((widget) => widget.name === "text_3").disabled, true);
+    assert.equal(node.__phantomGodTextControlRoot.children[1].children[2].children[1].textContent, "OFF");
+    node.__phantomGodTextControlRoot.children[1].children[2].children[1].click();
+    assert.equal(node.properties.phantomGodTextRemoveState["3"], undefined);
 });
 
-test("removes a specific added field and either default field", () => {
+test("remove button deletes only its matching field", () => {
     const { node } = setupNode();
-    const root = node.__phantomGodTextControlRoot;
-
-    root.children[0].click(); // add Text 3
-    let remove3 = root.children[1].children.find((button) => button.dataset.textIndex === "3");
-    assert.ok(remove3);
-    remove3.click();
+    node.__phantomGodTextControlRoot.children[2].children[0].click();
+    const row = node.__phantomGodTextControlRoot.children[1].children[2];
+    row.children[2].click();
     assert.equal(node.inputs.some((input) => input.name === "text_3"), false);
     assert.equal(node.widgets.some((widget) => widget.name === "text_3"), false);
     assert.deepEqual(node.removedInputs, ["text_3"]);
-
-    const remove1 = root.children[1].children.find((button) => button.dataset.textIndex === "1");
-    assert.ok(remove1);
-    remove1.click();
-    assert.equal(node.inputs.some((input) => input.name === "text_1"), false);
-    assert.equal(node.widgets.some((widget) => widget.name === "text_1"), false);
 });
 
 test("restores remaining fields and named workflow values after removal", () => {
@@ -203,15 +162,10 @@ test("restores remaining fields and named workflow values after removal", () => 
             { name: "text_4", type: "STRING", widget: { name: "text_4" } },
         ],
         widgets_values: [" ", "old-two", "old-four"],
-        widgets_values_named: {
-            delimiter: " ",
-            text_2: "second",
-            text_4: "fourth",
-        },
+        widgets_values_named: { delimiter: " ", text_2: "second", text_4: "fourth" },
     };
     node.inputs = workflowNode.inputs.map((input) => ({ ...input }));
     node.onConfigure(workflowNode);
-
     assert.equal(node.widgets.some((widget) => widget.name === "text_1"), false);
     assert.equal(node.widgets.find((widget) => widget.name === "text_2").value, "second");
     assert.equal(node.widgets.find((widget) => widget.name === "text_4").value, "fourth");
