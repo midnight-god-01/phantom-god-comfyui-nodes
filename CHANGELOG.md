@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.2 — 2026-11-18
+
+- Audited every pack feature: Auto Arrange Graph, Concatenate Text, Multi LoRA Loader, and Environment Manager.
+- Made Concatenate Text OFF switches exclude values from the execution prompt, including values supplied through linked sockets.
+- Corrected Concatenate Text DOM control sizing using rendered content measurements while preserving ComfyUI's native multiline widget sizing.
+- Required an importable Triton version matching the active PyTorch compatibility line before enabling SageAttention installation.
+- Added the verified PyTorch 2.15 → Triton 3.9 pairing for Linux.
+- Made Environment Manager layout content-aware, aligned its install polling window with the backend timeout, and stopped client polling when its node is removed.
+- Added regression tests for execution toggles, package prerequisites, live layout sizing, and node cleanup.
+- Updated README feature inventory, supported LoRA row count, development file tree, and validation commands.
+
+
 ## 1.5.1 — 2026-11-18
 
 - Fixed Concatenate Text collapsing native multiline text widgets by preserving ComfyUI's widget sizing.
