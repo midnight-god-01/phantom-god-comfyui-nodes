@@ -202,7 +202,7 @@ function injectStyles() {
     style.textContent = [
         ".pg-text-controls{display:flex;align-items:center;gap:7px;width:100%;min-width:0;box-sizing:border-box;overflow:hidden;color:var(--input-text,#eee);font:12px Inter,system-ui,sans-serif;}",
         ".pg-text-controls button{box-sizing:border-box;white-space:nowrap;cursor:pointer;transition:background .14s,border-color .14s,color .14s;font:inherit;}",
-        ".pg-text-add{flex:0 0 auto;padding:7px 12px;border:1px solid var(--border-color,rgba(255,255,255,.16));border-radius:5px;background:var(--comfy-input-bg,#282828);color:var(--input-text,#eee);font-weight:600;}",
+        ".pg-text-add{flex:0 0 auto;padding:7px 12px;border:1px solid var(--border-color,rgba(255,255,255,.16));border-radius:6px;background:var(--comfy-input-bg,#282828);color:var(--input-text,#eee);font-weight:600;}",
         ".pg-text-add:hover{border-color:var(--p-primary,#8b9b9b);background:var(--comfy-menu-bg,#383838);}",
         ".pg-text-remove-list{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:thin;}",
         ".pg-text-remove{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(220,90,90,.32);border-radius:4px;background:rgba(150,45,45,.1);color:var(--input-text,#ddd);font-size:11px;}",
