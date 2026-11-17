@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.3 — 2026-11-18
+
+- Prevented Environment Manager from running environment scans automatically as a workflow output; checks remain available through its explicit UI action or when its STRING output is connected.
+- Restricted SageAttention wheel matching to the compute capabilities published by the upstream build and CUDA 12.0 or newer.
+- Added regression tests for unsupported GPU architectures, CUDA minimum version, and manual-only Environment Manager execution.
+
+
 ## 1.5.2 — 2026-11-18
 
 - Audited every pack feature: Auto Arrange Graph, Concatenate Text, Multi LoRA Loader, and Environment Manager.
