@@ -1,6 +1,6 @@
 {
   "name": "phantom-god-comfyui-nodes",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "private": true,
   "type": "module",
   "description": "ComfyUI nodes and frontend tools for graph arrangement, text concatenation, model-only multi-LoRA stacking, and CUDA environment management.",
