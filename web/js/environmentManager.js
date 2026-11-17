@@ -89,6 +89,7 @@ function renderEnvironment(report) {
     const grid = element("div", "pg-env-meta");
     grid.appendChild(metaItem("Python", env.python));
     grid.appendChild(metaItem("PyTorch", env.torch));
+    grid.appendChild(metaItem("pip", env.pip_available ? (env.pip_version || "Available") : "Not available"));
     grid.appendChild(metaItem("Torch CUDA runtime", env.cuda));
     grid.appendChild(metaItem("CUDA available", env.cuda_available ? "Yes" : "No"));
     grid.appendChild(metaItem("GPU", env.gpu_name));
@@ -111,6 +112,7 @@ function renderPackage(node, key, title, report) {
     panel.appendChild(head);
 
     panel.appendChild(element("div", "pg-env-message", info.message || "Run an environment check to see compatibility."));
+    if (info.triton_note) panel.appendChild(element("div", "pg-env-message", info.triton_note));
     const current = info.installed ? "Installed: " + info.installed : "Installed: no";
     const target = info.target_version || (info.latest ? "Latest compatible: " + info.latest : (info.target_minor ? "Compatible line: 3." + info.target_minor : "Compatible version: not determined"));
     panel.appendChild(element("div", "pg-env-message", current + "  ·  " + target));
