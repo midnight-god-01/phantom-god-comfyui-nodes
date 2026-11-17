@@ -161,7 +161,10 @@ def _select_sage_wheel(wheels, python_version, torch_version, cuda_version,
             "No prebuilt SageAttention wheel matches Python {}, PyTorch {}, CUDA {}, and {}."
             .format(python_version[0], torch_version, cuda_version, system)
         )
-    matching.sort(key=lambda item: item["version"], reverse=True)
+    matching.sort(
+        key=lambda item: _version_sort_key(item["version"].split("+", 1)[0]),
+        reverse=True,
+    )
     return matching[0], "Exact Python/PyTorch/CUDA wheel match found."
 
 
@@ -200,7 +203,7 @@ def _version_sort_key(value):
     post = re.search(r"post(\d+)", suffix, re.IGNORECASE)
     return (
         int(match.group(1)), int(match.group(2)), int(match.group(3)),
-        int(post.group(1)) if post else (0 if suffix else 1),
+        (1, int(post.group(1))) if post else (0, 0),
     )
 
 
@@ -248,6 +251,8 @@ def _environment_details():
     details = {
         "python": platform.python_version(),
         "python_executable": sys.executable,
+        "pip_available": False,
+        "pip_version": None,
         "platform": platform.platform(),
         "system": platform.system(),
         "machine": platform.machine(),
@@ -261,6 +266,17 @@ def _environment_details():
         "glibc": platform.libc_ver()[1] if platform.libc_ver()[0] == "glibc" else None,
         "error": None,
     }
+    try:
+        pip_result = subprocess.run(
+            [sys.executable, "-m", "pip", "--version"],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+        if pip_result.returncode == 0:
+            details["pip_available"] = True
+            pip_tokens = (pip_result.stdout or "").strip().split()
+            details["pip_version"] = pip_tokens[1] if len(pip_tokens) > 1 else "Available"
+    except Exception:
+        pass
     try:
         import torch
         details["torch"] = str(torch.__version__)
@@ -345,11 +361,12 @@ def _triton_report(env):
         result.update(status="Unsupported Python", message="Triton 3.9 Windows wheels require Python 3.11 or newer.")
         return result
     result["supported"] = True
-    if windows and legacy_version and not installed:
+    if windows and legacy_version:
+        coexist = " alongside triton-windows" if installed else ""
         result.update(
             status="Package conflict",
-            message="Legacy 'triton' {} is installed. The Windows build uses 'triton-windows'; the installer will replace the legacy distribution."
-                    .format(legacy_version),
+            message="Legacy 'triton' {} is installed{}. The Windows build uses 'triton-windows'; the installer will remove the conflicting legacy distribution."
+                    .format(legacy_version, coexist),
         )
     try:
         latest = _latest_pypi_version(target["package"], target["minor"])
@@ -415,8 +432,29 @@ def _sage_report(env):
     result["supported"] = True
     result["target_version"] = wheel["version"]
     result["wheel_url"] = wheel["url"]
+    triton_distribution = "triton-windows" if env.get("system") == "Windows" else "triton"
+    triton_version = _distribution_version(triton_distribution)
+    triton_import_ok, triton_import_detail = (
+        _safe_import_status("triton") if triton_version else (False, "Triton is not installed.")
+    )
+    triton_ready = bool(
+        triton_version
+        and _parse_version_pair(triton_version)
+        and _parse_version_pair(triton_version) >= (3, 0)
+        and triton_import_ok
+    )
+    result["triton_version"] = triton_version
+    result["triton_ready"] = triton_ready
+    if not triton_ready:
+        result["triton_note"] = (
+            "SageAttention requires Triton >=3.0.0. Install or repair the Triton package first. "
+            + (triton_import_detail or "")
+        )
     if installed == wheel["version"]:
-        result.update(status="Up to date", message="Installed SageAttention wheel exactly matches this Python/PyTorch/CUDA environment.")
+        if triton_ready:
+            result.update(status="Up to date", message="Installed SageAttention wheel exactly matches this Python/PyTorch/CUDA environment.")
+        else:
+            result.update(status="Prerequisite missing", message="SageAttention version matches this environment, but its Triton prerequisite is not ready.")
     elif installed:
         result.update(
             status="Update or repair available",
@@ -425,10 +463,14 @@ def _sage_report(env):
         )
     else:
         result.update(status="Not installed", message=reason)
+    if not triton_ready and result.get("triton_note"):
+        result["message"] += " " + result["triton_note"]
     result["import_ok"], result["import_detail"] = _safe_import_status("sageattention") if installed else (False, None)
     if installed and not result["import_ok"]:
         result["status"] = "Import failed"
         result["message"] = "SageAttention is installed but cannot be imported: {}".format(result["import_detail"])
+        if result.get("triton_note"):
+            result["message"] += " " + result["triton_note"]
     return result
 
 
@@ -467,6 +509,11 @@ def _install_worker(job_id, package):
         with _INSTALL_LOCK:
             _set_job(job_id, state="running", message="Checking compatibility and preparing the installation.")
             report = build_environment_report()
+            if not report["environment"].get("pip_available"):
+                raise RuntimeError(
+                    "pip is not available in the active ComfyUI Python. "
+                    "Install pip into this interpreter (for example, python -m ensurepip) and run Check again."
+                )
             info = report.get(package) or {}
             if not info.get("supported"):
                 raise RuntimeError(info.get("message") or "This package is not supported in the current environment.")
@@ -474,7 +521,7 @@ def _install_worker(job_id, package):
                 target = _triton_target(report["environment"]["torch"], report["environment"]["system"])
                 if not target:
                     raise RuntimeError("No compatible Triton version was found.")
-                if report["environment"]["system"] == "Windows" and _distribution_version("triton") and not _distribution_version("triton-windows"):
+                if report["environment"]["system"] == "Windows" and _distribution_version("triton"):
                     old_version = _distribution_version("triton")
                     _set_job(job_id, message="Removing the conflicting legacy Triton package before installing triton-windows.")
                     remove = _run_pip([sys.executable, "-m", "pip", "uninstall", "-y", "triton"])
