@@ -1,7 +1,7 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.1.0"
-description = "ComfyUI frontend extension pack, starting with Auto Arrange Graph."
+version = "1.2.0"
+description = "Modular ComfyUI custom-node pack with frontend extensions and backend nodes."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

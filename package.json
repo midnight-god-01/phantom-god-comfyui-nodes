@@ -1,9 +1,9 @@
 {
   "name": "phantom-god-comfyui-nodes",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
-  "description": "ComfyUI frontend extension pack with Auto Arrange Graph.",
+  "description": "Modular ComfyUI custom-node pack with Auto Arrange Graph and dynamic text concatenation.",
   "scripts": {
     "test": "node --test"
   }

@@ -24,24 +24,38 @@ jobs:
         with:
           node-version: "26"
 
-      - name: Check Python entry point and web directory
+      - name: Check Python package and feature registry
         run: |
-          python -m py_compile __init__.py
+          python -m py_compile __init__.py features/*.py
           python - <<'PY'
           from pathlib import Path
           import importlib.util
+          import sys
 
           root = Path.cwd()
-          spec = importlib.util.spec_from_file_location("phantom_god_comfyui_nodes", root / "__init__.py")
+          spec = importlib.util.spec_from_file_location(
+              "phantom_god_comfyui_nodes",
+              root / "__init__.py",
+              submodule_search_locations=[str(root)],
+          )
           module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
           spec.loader.exec_module(module)
+
           assert module.WEB_DIRECTORY == "./web/js"
-          assert module.NODE_CLASS_MAPPINGS == {}
+          assert "PhantomGodConcatenateText" in module.NODE_CLASS_MAPPINGS
+          assert module.NODE_DISPLAY_NAME_MAPPINGS["PhantomGodConcatenateText"] == "Concatenate Text (Phantom God)"
           assert (root / module.WEB_DIRECTORY / "graphArrange.js").is_file()
+          assert (root / module.WEB_DIRECTORY / "concatenateText.js").is_file()
           PY
 
-      - name: Check frontend JavaScript syntax
-        run: node --check web/js/graphArrange.js
+      - name: Run Python node tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Run layout and menu tests
+      - name: Check frontend JavaScript syntax
+        run: |
+          node --check web/js/graphArrange.js
+          node --check web/js/concatenateText.js
+
+      - name: Run frontend tests
         run: node --test

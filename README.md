@@ -1,77 +1,112 @@
 # Phantom God ComfyUI Nodes
 
-A ComfyUI frontend extension repository. The first release contains exactly one feature: **Auto Arrange Graph**.
+A modular ComfyUI custom-node pack. Features are kept in separate Python and JavaScript modules so new tools can be added without rewriting the package entry point or disturbing existing features.
 
-## Auto Arrange Graph
+## Features
 
-Right-click an **empty area of the graph canvas** to access two commands:
+### Auto Arrange Graph
 
-- **Arrange (float left)** — delegates to ComfyUI's native `graph.arrange()` layout.
-- **Arrange (float right)** — arranges nodes by execution order, moves upstream nodes toward their earliest downstream use, and right-aligns nodes inside each column. `SaveImage` and `PreviewImage` nodes are prioritized at the top of their column.
+Right-click an empty area of the graph canvas to access two commands:
 
-These are canvas context-menu commands, not draggable workflow nodes. The extension does not add backend nodes, alter workflow connections, or install third-party runtime dependencies.
+- **Arrange (float left)** — delegates to ComfyUI's native graph.arrange() layout.
+- **Arrange (float right)** — arranges nodes by execution order, moves upstream nodes toward their earliest downstream use, and right-aligns nodes inside each column. SaveImage and PreviewImage nodes are prioritized at the top of their column.
+
+These are canvas context-menu commands, not draggable workflow nodes.
+
+### Concatenate Text (Phantom God)
+
+Find **Concatenate Text (Phantom God)** under **Phantom God / Text**.
+
+- Starts with two multiline text fields.
+- Click **Add Text** to add as many more fields as needed.
+- Every text field can be typed into or connected to another ComfyUI STRING output.
+- Set a custom delimiter. The default is one space; commas, pipes, and newline separators work too.
+- Fields are concatenated in numeric order: text_1, text_2, text_3, and so on.
+- Empty fields are skipped, so they do not create duplicate delimiters.
+- Dynamic fields and their values are restored when a workflow is reopened.
+
+The node returns one STRING output.
 
 ## Install
 
-Run this from your ComfyUI `custom_nodes` directory:
+Run this from your ComfyUI custom_nodes directory:
 
-```bash
+~~~~bash
 git clone https://github.com/midnight-god-01/phantom-god-comfyui-nodes.git
-```
+~~~~
 
-Restart ComfyUI and hard-refresh the browser (`Ctrl+Shift+R`).
+Restart the ComfyUI server, then hard-refresh the browser (Ctrl+Shift+R).
 
 ## Update
 
-```bash
+~~~~bash
 cd phantom-god-comfyui-nodes
 git pull
-```
+~~~~
 
 Restart ComfyUI and hard-refresh the browser after updating.
 
-## Troubleshooting
+## Add future features
 
-1. Confirm that `ComfyUI/custom_nodes/phantom-god-comfyui-nodes/__init__.py` exists. It must be directly inside the repository folder.
-2. Remove earlier standalone folders named `ComfyUI-Auto-Arrange-Graph*` from `custom_nodes` to prevent duplicate or broken copies.
-3. Right-click a blank canvas area, not a node, link, or group. These commands are added to the canvas menu.
-4. Open the browser developer console and confirm that it reports:
+The package uses automatic feature discovery. You do not need to edit the root __init__.py when adding another Python node.
 
-   ```text
-   [Phantom God] Auto Arrange Graph extension loaded (v1.1.0).
-   ```
+1. Create a new Python module inside features/, for example features/my_new_node.py.
+2. Define your node class in that file.
+3. Export NODE_CLASS_MAPPINGS and, optionally, NODE_DISPLAY_NAME_MAPPINGS from that module.
 
-5. If the message is missing, check the ComfyUI startup log for custom-node import errors and confirm that the repository's `WEB_DIRECTORY` resolves to `web/js`.
+~~~~python
+class MyNewNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"text": ("STRING", {"default": ""})}}
 
-## Compatibility and implementation
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "run"
+    CATEGORY = "Phantom God/My Category"
 
-This is a frontend-only ComfyUI custom-node extension. Its root `__init__.py` exports the documented `WEB_DIRECTORY = "./web/js"` entry point and an intentionally empty `NODE_CLASS_MAPPINGS = {}`. The empty mapping is required by ComfyUI v0.45.0’s V1 custom-node loader for a frontend-only pack; it prevents the package being marked as an import failure while adding no draggable or executable backend nodes. The frontend imports `app` from ComfyUI's `scripts/app.js`, registers through `app.registerExtension()`, and adds the two commands through the official `getCanvasMenuItems()` hook. It does not patch `LGraphCanvas` prototypes or import deprecated `/scripts/ui.js` APIs.
+    def run(self, text):
+        return (text,)
 
-The layout actions use ComfyUI's graph APIs: `graph.arrange()`, `graph.computeExecutionOrder(false, true)`, the current `graph.links` Map, `node.setPos()`, and `graph.setDirtyCanvas()`. The float-right action retains the original upstream "earliest downstream use" placement behavior while avoiding the old indexed `graph.links[id]` access.
+NODE_CLASS_MAPPINGS = {"PhantomGodMyNewNode": MyNewNode}
+NODE_DISPLAY_NAME_MAPPINGS = {"PhantomGodMyNewNode": "My New Node"}
+~~~~
 
-### Version check
+4. When a node needs custom frontend behavior, create a separate JavaScript file directly inside web/js/, for example web/js/myNewNode.js. Register it with app.registerExtension() and give it a unique extension name. Keep each frontend feature in its own file.
+5. Add tests under tests/, then run the checks below.
 
-Checked on **17 November 2026**:
-
-- Latest stable ComfyUI core release: **v0.45.0**.
-- The ComfyUI v0.45.0 release notes specify bundled frontend package **1.58.5**.
-- Latest stable `comfyui-frontend-package` on PyPI: **1.59.2** (released 16 November 2026).
-- The ComfyUI log you provided reported frontend package **1.59.1**, one patch behind 1.59.2.
-
-The implementation is based on the current frontend extension types and graph methods, not legacy canvas prototype overrides. The extension itself has no frontend-version pin and uses only the supported APIs described above.
+The registry imports every non-private Python module directly inside features/ and merges its node mappings. Private modules whose names start with an underscore are ignored. Avoid duplicate node mapping keys.
 
 ## Development checks
 
-No JavaScript package installation is required. With Python 3.13 and Node.js 26 installed, run:
+No third-party Python or JavaScript runtime dependencies are required by this repository.
 
-```bash
-python -m py_compile __init__.py
+~~~~bash
+python -m py_compile __init__.py features/*.py
+python -m unittest discover -s tests -p 'test_*.py'
 node --check web/js/graphArrange.js
+node --check web/js/concatenateText.js
 node --test
-```
+~~~~
 
-GitHub Actions runs these checks on pushes and pull requests. Dependabot checks the workflow actions weekly for updates.
+GitHub Actions runs the Python and JavaScript checks on pushes and pull requests. Dependabot checks workflow actions weekly.
+
+## Compatibility and implementation
+
+The package supports ComfyUI v0.45.0 and newer. The Python entry point exports NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, and WEB_DIRECTORY = "./web/js". Python node definitions are loaded from features/; frontend extension files are loaded from web/js/.
+
+The Concatenate Text backend accepts explicitly defined text_1 and text_2 inputs plus validated dynamic text_N inputs. Its frontend extension adds matching multiline widgets and STRING sockets, restores those fields from saved workflows, and supplies the Add Text button. The backend's optional-input mapping follows ComfyUI's documented dynamic-input pattern.
+
+Auto Arrange Graph continues to use ComfyUI's app.registerExtension() and getCanvasMenuItems() APIs. It does not patch LGraphCanvas prototypes or import deprecated /scripts/ui.js APIs.
+
+## Troubleshooting
+
+1. Confirm the repository is directly inside ComfyUI/custom_nodes/phantom-god-comfyui-nodes/ and that its root __init__.py is present.
+2. Restart the ComfyUI server after updating. A browser refresh alone cannot load new Python node definitions.
+3. Hard-refresh the browser after the server restarts.
+4. Confirm the ComfyUI startup log contains no import error for phantom-god-comfyui-nodes.
+5. Open the browser developer console and check for [Phantom God] messages from the frontend extensions.
+6. Auto Arrange Graph commands appear when right-clicking an empty canvas area. The Concatenate Text node appears in the node search under Phantom God / Text.
 
 ## Source and attribution
 
-The arrangement behavior is adapted from the Auto Arrange Graph script in [pythongosssss/ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts). The upstream MIT copyright notice is retained in [LICENSE](LICENSE).
+The Auto Arrange Graph placement behavior is adapted from the Auto Arrange Graph script in [pythongosssss/ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts). The upstream MIT copyright notice is retained in LICENSE.
