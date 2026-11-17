@@ -2,7 +2,7 @@
 
 A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
 
-**Current version:** 1.5.2  
+**Current version:** 1.5.3  
 **Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
@@ -58,12 +58,12 @@ Find the node under **Phantom God / System**. It inspects the active ComfyUI Pyt
 
 - Reports the exact Python executable, Python version, pip availability/version, PyTorch version, PyTorch CUDA runtime, CUDA availability, NVIDIA GPU, compute capability, and driver version when available.
 - Checks Triton against the PyTorch-compatible version line. On Windows it uses the `triton-windows` distribution; on Linux it uses the official `triton` distribution.
-- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It also requires the exact Triton minor matched to the active PyTorch version, with a successful import. It uses the Comfy-Org wheel index and does not guess a nearby build.
-- Installs into the same Python executable that is running ComfyUI. Triton and SageAttention have separate install/update controls.
+- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It requires the exact Triton minor matched to the active PyTorch version, with a successful import. The wheel check also enforces CUDA 12.0+ and SageAttention's published compute-capability targets. It uses the Comfy-Org wheel index and does not guess a nearby build.
+- Installs into the same Python executable that is running ComfyUI. Triton and SageAttention have separate install/update controls; install a compatible Triton build before SageAttention.
 - Does not upgrade, uninstall, or replace PyTorch or its dependencies. Installs use pip with dependency resolution disabled.
 - Requires a restart of ComfyUI after a successful installation before testing the package.
 
-The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels require an Ampere-class or newer GPU (compute capability 8.0+). If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build.
+The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels currently target compute capabilities 8.0, 8.6, 8.9, 9.0, 10.0, 12.0, and 12.1, with CUDA 12.0 or newer. If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build. Environment Manager is a manual utility; it is not an automatic workflow output and does not run on every queued prompt.
 
 ## Installation
 
