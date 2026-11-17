@@ -1,8 +1,10 @@
 import unittest
+from unittest.mock import patch
 
 from features.environment_manager import (
     _parse_sage_wheel,
     _parse_torch_tag,
+    _sage_report,
     _select_sage_wheel,
     _triton_target,
     _version_sort_key,
@@ -21,8 +23,14 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
         self.assertEqual(target["package"], "triton")
         self.assertEqual(target["minor"], 8)
 
+    def test_linux_supports_pytorch_2_15_triton_3_9(self):
+        target = _triton_target("2.15.0+cu130", "Linux")
+        self.assertEqual(target["package"], "triton")
+        self.assertEqual(target["minor"], 9)
+        self.assertEqual(target["spec"], ">=3.9,<3.10")
+
     def test_unknown_linux_triton_mapping_is_not_guessed(self):
-        self.assertIsNone(_triton_target("2.15.0+cu130", "Linux"))
+        self.assertIsNone(_triton_target("2.16.0+cu130", "Linux"))
 
     def test_post_release_sorts_after_base_version(self):
         self.assertGreater(_version_sort_key("3.6.0.post2"), _version_sort_key("3.6.0"))
@@ -108,6 +116,56 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
         self.assertIsNone(selected)
         self.assertIn("glibc 2.34", reason)
 
+class SageAttentionPrerequisiteTests(unittest.TestCase):
+    def test_wheel_is_not_installable_without_pytorch_matched_triton(self):
+        wheel = {
+            "version": "2.2.0+cu130torch214",
+            "url": "https://example.invalid/sageattention.whl",
+        }
+        env = {
+            "torch": "2.14.1+cu130",
+            "cuda": "13.0",
+            "cuda_available": True,
+            "system": "Windows",
+            "machine": "AMD64",
+            "capability": [8, 6],
+        }
+        with patch("features.environment_manager._load_sage_wheels", return_value=([wheel], None)), \\
+             patch("features.environment_manager._select_sage_wheel", return_value=(wheel, "Exact match")), \\
+             patch("features.environment_manager._distribution_version", side_effect=lambda name: "2.2.0+cu130torch214" if name == "sageattention" else None), \\
+             patch("features.environment_manager._safe_import_status", return_value=(True, None)):
+            report = _sage_report(env)
+
+        self.assertFalse(report["supported"])
+        self.assertEqual(report["status"], "Prerequisite missing")
+        self.assertFalse(report["triton_ready"])
+        self.assertEqual(report["wheel_url"], wheel["url"])
+
+    def test_sageattention_requires_the_expected_triton_minor(self):
+        wheel = {
+            "version": "2.2.0+cu130torch214",
+            "url": "https://example.invalid/sageattention.whl",
+        }
+        env = {
+            "torch": "2.14.1+cu130",
+            "cuda": "13.0",
+            "cuda_available": True,
+            "system": "Windows",
+            "machine": "AMD64",
+            "capability": [8, 6],
+        }
+        def package_version(name):
+            return {"sageattention": wheel["version"], "triton-windows": "3.7.1"}.get(name)
+        with patch("features.environment_manager._load_sage_wheels", return_value=([wheel], None)), \\
+             patch("features.environment_manager._select_sage_wheel", return_value=(wheel, "Exact match")), \\
+             patch("features.environment_manager._distribution_version", side_effect=package_version), \\
+             patch("features.environment_manager._safe_import_status", return_value=(True, None)):
+            report = _sage_report(env)
+
+        self.assertFalse(report["supported"])
+        self.assertEqual(report["triton_target"], "3.8")
+        self.assertEqual(report["triton_version"], "3.7.1")
+        self.assertEqual(report["status"], "Prerequisite missing")
 
 if __name__ == "__main__":
     unittest.main()
