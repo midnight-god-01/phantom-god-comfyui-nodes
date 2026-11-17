@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.1 — 2026-11-18
+
+- Fixed Concatenate Text collapsing native multiline text widgets by preserving ComfyUI's widget sizing.
+- Explicitly hid the serialized Multi LoRA state widget in both Classic and Nodes 2.0, preventing raw JSON from appearing in the node body.
+- Removed the 64-row restriction from the Python LoRA state parser as well as the frontend.
+- Added regressions for text widget sizing, hidden state widget handling, and 70-row stacks.
+
+
 ## 1.5.0 — 2026-11-18
 
 - Rebuilt Concatenate Text controls into responsive, non-scrolling rows with per-field enable/disable toggles and separate delete buttons.
