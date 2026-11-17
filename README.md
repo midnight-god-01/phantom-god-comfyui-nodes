@@ -63,7 +63,7 @@ Find the node under **Phantom God / System**. It inspects the active ComfyUI Pyt
 - Does not upgrade, uninstall, or replace PyTorch or its dependencies. Installs use pip with dependency resolution disabled.
 - Requires a restart of ComfyUI after a successful installation before testing the package.
 
-The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels currently target compute capabilities 8.0, 8.6, 8.9, 9.0, 10.0, 12.0, and 12.1, with CUDA 12.0 or newer. If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build. Environment Manager is a manual utility; it is not an automatic workflow output and does not run on every queued prompt.
+The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels currently target compute capabilities 8.0, 8.6, 8.9, 9.0, 10.0, 12.0, and 12.1. CUDA minimums are architecture-specific: 12.0 for Ampere, 12.4 for Ada, 12.3 for Hopper, and 12.8 for Blackwell. If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build. Environment Manager is a manual utility; it is not an automatic workflow output and does not run on every queued prompt.
 
 ## Installation
 
