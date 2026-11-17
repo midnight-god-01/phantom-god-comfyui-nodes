@@ -105,6 +105,42 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
         )
         self.assertIsNone(selected)
 
+    def test_sageattention_enforces_ada_cuda_12_4_minimum(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu123torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, reason = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.3",
+            "Windows", "AMD64", capability=(8, 9),
+        )
+        self.assertIsNone(selected)
+        self.assertIn("requires CUDA 12.4 or newer", reason)
+
+    def test_sageattention_enforces_hopper_cuda_12_3_minimum(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu123torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, reason = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.2",
+            "Windows", "AMD64", capability=(9, 0),
+        )
+        self.assertIsNone(selected)
+        self.assertIn("requires CUDA 12.3 or newer", reason)
+
+    def test_sageattention_enforces_blackwell_cuda_12_8_minimum(self):
+        wheel = _parse_sage_wheel(
+            "sageattention-2.2.0+cu128torch210-cp312-cp312-win_amd64.whl",
+            "https://example.invalid/wheel.whl",
+        )
+        selected, reason = _select_sage_wheel(
+            [wheel], (3, 12), "2.10.0", "12.6",
+            "Windows", "AMD64", capability=(12, 1),
+        )
+        self.assertIsNone(selected)
+        self.assertIn("requires CUDA 12.8 or newer", reason)
+
     def test_sageattention_linux_checks_glibc(self):
         wheel = _parse_sage_wheel(
             "sageattention-2.2.0+cu128torch210-cp312-cp312-manylinux_2_34_x86_64.whl",
