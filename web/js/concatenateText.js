@@ -132,18 +132,34 @@ function createButton(text, className, title, callback) {
     return item;
 }
 
+function controlContentHeight(node) {
+    const count = getTextInputIndices(node.inputs).length;
+    // Fallback includes the heading, 38px control rows, row gaps, Add button,
+    // root gaps and padding. Prefer measuring the actual DOM when it is mounted.
+    const fallback = count ? 61 + count * 43 : 66;
+    const root = node.__phantomGodTextControlRoot;
+    if (!root?.isConnected || !root.children?.length) return fallback;
+
+    const children = Array.from(root.children);
+    let height = children.reduce((sum, child) => sum + (Number(child.offsetHeight) || 0), 0);
+    const style = globalThis.getComputedStyle?.(root);
+    const gap = Number.parseFloat(style?.rowGap || style?.gap) || 8;
+    height += gap * Math.max(0, children.length - 1);
+    height += Number.parseFloat(style?.paddingTop) || 0;
+    height += Number.parseFloat(style?.paddingBottom) || 0;
+    return height > 0 ? Math.max(fallback, Math.ceil(height)) : fallback;
+}
+
 function updateControlLayout(node) {
     const dom = node.__phantomGodTextControls;
     if (!dom) return;
-    const count = getTextInputIndices(node.inputs).length;
-    const height = 55 + count * 37;
     dom.computeLayoutSize = () => ({
-        minHeight: height,
-        maxHeight: height,
+        minHeight: controlContentHeight(node),
+        maxHeight: controlContentHeight(node),
         minWidth: 160,
     });
-    dom.options.getMinHeight = () => height;
-    dom.options.getMaxHeight = () => height;
+    dom.options.getMinHeight = () => controlContentHeight(node);
+    dom.options.getMaxHeight = () => controlContentHeight(node);
 }
 
 function renderTextControls(node) {
