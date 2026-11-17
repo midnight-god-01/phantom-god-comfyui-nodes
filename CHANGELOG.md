@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.4 — 2026-11-18
+
+- Reworked Multi LoRA content sizing to measure live DOM children and recalculate the Nodes 2.0 layout height on demand.
+- Included loading and error rows in the calculated node height to avoid clipping during asynchronous model-list loading or API errors.
+- Added regression coverage for layout growth when additional DOM status content is rendered.
+
+
 ## 1.5.3 — 2026-11-18
 
 - Prevented Environment Manager from running environment scans automatically as a workflow output; checks remain available through its explicit UI action or when its STRING output is connected.
