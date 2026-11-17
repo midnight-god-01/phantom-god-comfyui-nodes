@@ -24,6 +24,9 @@ TRITON_MINOR_MAP = {
 }
 TRITON_WINDOWS_MAP = {**TRITON_MINOR_MAP, (2, 15): 9}
 SAGE_MIN_COMPUTE_CAPABILITY = (8, 0)
+SAGE_SUPPORTED_COMPUTE_CAPABILITIES = {
+    (8, 0), (8, 6), (8, 9), (9, 0), (10, 0), (12, 0), (12, 1),
+}
 PYPI_INDEX = "https://pypi.org/pypi/{}/json"
 INSTALL_TIMEOUT_SECONDS = 1800
 _JOB_LOCK = threading.Lock()
@@ -130,12 +133,19 @@ def _parse_sage_wheel(filename, url):
 def _select_sage_wheel(wheels, python_version, torch_version, cuda_version,
                        system, machine, glibc_version=None, capability=None):
     """Choose only an exact Python/PyTorch/CUDA/platform wheel."""
-    if not capability or tuple(capability) < SAGE_MIN_COMPUTE_CAPABILITY:
-        return None, "SageAttention requires an NVIDIA GPU with compute capability 8.0 or newer."
+    capability_pair = tuple(capability) if capability else None
+    if capability_pair not in SAGE_SUPPORTED_COMPUTE_CAPABILITIES:
+        supported = ", ".join("{}.{}".format(*item) for item in sorted(SAGE_SUPPORTED_COMPUTE_CAPABILITIES))
+        return None, "SageAttention wheels support NVIDIA compute capabilities {} only; detected {}.".format(
+            supported,
+            "{}.{}".format(*capability_pair) if capability_pair else "no NVIDIA GPU",
+        )
     torch_pair = _parse_version_pair(torch_version)
     cuda_tag = _parse_cuda_tag(cuda_version)
     if not torch_pair or not cuda_tag:
         return None, "A CUDA-enabled PyTorch build is required."
+    if int(cuda_tag) < 120:
+        return None, "SageAttention requires CUDA 12.0 or newer for its supported GPU kernels."
     if machine.lower() not in ("x86_64", "amd64"):
         return None, "The current Comfy-Org wheel index provides x86-64 builds only."
     py_tag = "{}{}".format(python_version[0], python_version[1])
@@ -671,7 +681,9 @@ class PhantomGodEnvironmentManager:
     RETURN_NAMES = ("environment_report",)
     FUNCTION = "check_environment"
     CATEGORY = "Phantom God/System"
-    OUTPUT_NODE = True
+    # This is a utility node, not a workflow sink. Its UI has explicit Check
+    # actions; do not run the environment/network checks on every queued prompt.
+    OUTPUT_NODE = False
     DESCRIPTION = (
         "Check the Python, PyTorch, CUDA and GPU environment. Install or update "
         "Triton and SageAttention independently using environment-matched wheels. "
