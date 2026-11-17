@@ -3,8 +3,6 @@
 import json
 import math
 
-
-MAX_LORAS = 64
 MIN_STRENGTH = -100.0
 MAX_STRENGTH = 100.0
 
@@ -27,8 +25,6 @@ def _parse_state(raw_state):
     rows = state.get("loras", [])
     if not isinstance(rows, list):
         raise ValueError("The LoRA stack must contain a list of rows.")
-    if len(rows) > MAX_LORAS:
-        raise ValueError("The LoRA stack limit is {} rows.".format(MAX_LORAS))
 
     result = []
     for position, row in enumerate(rows, start=1):
@@ -79,7 +75,7 @@ class PhantomGodMultiLoraModelOnly:
     """Apply a configurable stack of LoRAs to MODEL only (no CLIP input/output)."""
 
     DESCRIPTION = (
-        "Stack up to 64 LoRAs in one node. Each row has its own file picker, "
+        "Stack any number of LoRAs in one node. Each row has its own file picker, "
         "strength, on/off toggle, and remove button. Disabled and empty rows are "
         "ignored. This node modifies MODEL only and has no CLIP connection."
     )
