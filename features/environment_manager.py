@@ -23,9 +23,17 @@ TRITON_MINOR_MAP = {
     (2, 12): 7, (2, 13): 7, (2, 14): 8, (2, 15): 9,
 }
 TRITON_WINDOWS_MAP = {**TRITON_MINOR_MAP, (2, 15): 9}
-SAGE_MIN_COMPUTE_CAPABILITY = (8, 0)
 SAGE_SUPPORTED_COMPUTE_CAPABILITIES = {
     (8, 0), (8, 6), (8, 9), (9, 0), (10, 0), (12, 0), (12, 1),
+}
+SAGE_MIN_CUDA_BY_CAPABILITY = {
+    (8, 0): (12, 0),
+    (8, 6): (12, 0),
+    (8, 9): (12, 4),
+    (9, 0): (12, 3),
+    (10, 0): (12, 8),
+    (12, 0): (12, 8),
+    (12, 1): (12, 8),
 }
 PYPI_INDEX = "https://pypi.org/pypi/{}/json"
 INSTALL_TIMEOUT_SECONDS = 1800
@@ -144,8 +152,18 @@ def _select_sage_wheel(wheels, python_version, torch_version, cuda_version,
     cuda_tag = _parse_cuda_tag(cuda_version)
     if not torch_pair or not cuda_tag:
         return None, "A CUDA-enabled PyTorch build is required."
-    if int(cuda_tag) < 120:
+    cuda_pair = _parse_version_pair(cuda_version)
+    if not cuda_pair or cuda_pair < (12, 0):
         return None, "SageAttention requires CUDA 12.0 or newer for its supported GPU kernels."
+    minimum_cuda = SAGE_MIN_CUDA_BY_CAPABILITY[capability_pair]
+    if cuda_pair < minimum_cuda:
+        return None, (
+            "SageAttention on compute capability {}.{} requires CUDA {}.{} or newer; detected {}."
+            .format(
+                capability_pair[0], capability_pair[1],
+                minimum_cuda[0], minimum_cuda[1], cuda_version,
+            )
+        )
     if machine.lower() not in ("x86_64", "amd64"):
         return None, "The current Comfy-Org wheel index provides x86-64 builds only."
     py_tag = "{}{}".format(python_version[0], python_version[1])
