@@ -145,20 +145,24 @@ class PhantomGodMultiLoraModelOnly:
         return lora, metadata
 
     def apply(self, model, LoraStackState="{}"):
-        import folder_paths
-        import comfy.sd
-
         if model is None:
             raise ValueError("Connect a MODEL input before applying LoRAs.")
 
         rows = _parse_state(LoraStackState)
+        active_rows = [
+            row for row in rows
+            if row["on"] and row["name"] and row["strength"] != 0
+        ]
+        if not active_rows:
+            return (model,)
+
+        import folder_paths
+        import comfy.sd
+
         current_model = model
         applied = 0
 
-        for row in rows:
-            if not row["on"] or not row["name"] or row["strength"] == 0:
-                continue
-
+        for row in active_rows:
             name = row["name"]
             strength = row["strength"]
 
