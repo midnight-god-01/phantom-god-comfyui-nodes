@@ -157,8 +157,21 @@ test("adds multiple independent LoRA rows with file and strength controls", asyn
     const { extension, app } = loadExtension();
     const node = makeNode();
     app.graph = { _nodes: [node], setDirtyCanvas() {} };
+    // Simulate the serialized JSON STRING widget that Vue can otherwise display.
+    node.widgets.push({
+        name: "LoraStackState",
+        value: "{}",
+        options: {},
+        computeSize() { return [320, 60]; },
+        element: { style: {} },
+    });
     extension.nodeCreated(node);
     await flushPromises();
+
+    const hiddenState = node.widgets.find((widget) => widget.name === "LoraStackState");
+    assert.equal(hiddenState.hidden, true);
+    assert.deepEqual(hiddenState.computeSize(), [0, -4]);
+    assert.equal(hiddenState.options.canvasOnly, true);
 
     const root = node.__phantomGodLoraRoot;
     const addButton = root.children[0].children[0];
