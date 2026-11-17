@@ -39,6 +39,19 @@ class MultiLoraStateTests(unittest.TestCase):
         rows = _parse_state({"loras": [{"name": "folder\\style.safetensors"}]})
         self.assertEqual(rows[0]["name"], "folder/style.safetensors")
 
+    def test_rejects_absolute_and_traversal_paths(self):
+        for name in (
+            "../outside.safetensors",
+            "folder/../../outside.safetensors",
+            "/absolute/model.safetensors",
+            "C:\\models\\outside.safetensors",
+            "folder//model.safetensors",
+            "folder/./model.safetensors",
+        ):
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, "relative path"):
+                    _parse_state({"loras": [{"name": name}]})
+
     def test_rejects_invalid_json(self):
         with self.assertRaises(ValueError):
             _parse_state("{broken")
@@ -53,7 +66,7 @@ class MultiLoraStateTests(unittest.TestCase):
 
     def test_rejects_strength_outside_supported_range(self):
         with self.assertRaises(ValueError):
-            _parse_state({"loras": [{"name": "a.safetensors", "strength": 101}]})
+            _parse_state({"loras": [{"name": "a.safetensors", "strength": 101}] })
 
 
 class MultiLoraNodeTests(unittest.TestCase):
@@ -122,6 +135,33 @@ class MultiLoraNodeTests(unittest.TestCase):
         self.assertEqual(len(applied), 2)
         self.assertTrue(all(call[1] is None and call[4] == 0.0 for call in applied))
         self.assertEqual([call[3] for call in applied], [0.8, -0.4])
+        self.assertEqual(utils.load_torch_file.call_count, 2)
+
+    def test_reload_cache_when_file_changes_at_same_path(self):
+        utils = types.SimpleNamespace(load_torch_file=MagicMock(
+            side_effect=[({"weights": 1}, {"revision": 1}), ({"weights": 2}, {"revision": 2})]
+        ))
+        package = fake_comfy(utils=utils)
+        stat_values = iter([
+            types.SimpleNamespace(st_size=10, st_mtime=1.0, st_mtime_ns=1_000_000_000, st_ino=1),
+            types.SimpleNamespace(st_size=10, st_mtime=1.0, st_mtime_ns=1_000_000_000, st_ino=1),
+            types.SimpleNamespace(st_size=12, st_mtime=2.0, st_mtime_ns=2_000_000_000, st_ino=1),
+        ])
+        with patch.dict(sys.modules, {
+            "comfy": package,
+            "comfy.utils": utils,
+        }), patch("os.stat", side_effect=lambda _path: next(stat_values)):
+            node = PhantomGodMultiLoraModelOnly()
+            first, first_metadata = node._load_lora("/loras/example.safetensors")
+            cached, cached_metadata = node._load_lora("/loras/example.safetensors")
+            refreshed, refreshed_metadata = node._load_lora("/loras/example.safetensors")
+
+        self.assertEqual(first, {"weights": 1})
+        self.assertEqual(first_metadata, {"revision": 1})
+        self.assertEqual(cached, first)
+        self.assertEqual(cached_metadata, first_metadata)
+        self.assertEqual(refreshed, {"weights": 2})
+        self.assertEqual(refreshed_metadata, {"revision": 2})
         self.assertEqual(utils.load_torch_file.call_count, 2)
 
     def test_raises_a_clear_error_when_a_lora_is_missing(self):

@@ -1,134 +1,157 @@
 # Phantom God ComfyUI Nodes
 
-A modular ComfyUI custom-node pack. Features are kept in separate Python and JavaScript modules so new tools can be added without rewriting the package entry point or disturbing existing features.
+A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
+
+**Current version:** 1.3.1  
+**Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
 
 ### Auto Arrange Graph
 
-Right-click an empty area of the graph canvas to access two commands:
+Adds two commands to the graph canvas context menu:
 
-- **Arrange (float left)** — delegates to ComfyUI's native graph.arrange() layout.
-- **Arrange (float right)** — arranges nodes by execution order, moves upstream nodes toward their earliest downstream use, and right-aligns nodes inside each column. SaveImage and PreviewImage nodes are prioritized at the top of their column.
+- **Arrange (float left)** uses ComfyUI's native graph arrangement.
+- **Arrange (float right)** places nodes by execution order, right-aligns nodes within columns, and moves upstream nodes toward their earliest downstream use. Save Image and Preview Image nodes are prioritized within each column.
 
-These are canvas context-menu commands, not draggable workflow nodes.
+To access the commands, right-click an empty area of the graph canvas. These are canvas actions, not workflow nodes.
 
 ### Concatenate Text (Phantom God)
 
-Find **Concatenate Text (Phantom God)** under **Phantom God / Text**.
+Find the node under **Phantom God / Text**.
 
-- Starts with two multiline text fields.
-- Click **Add Text** to add as many more fields as needed.
-- The Add Text control has rounded corners and matching text-field labels/placeholders such as **Text 3**.
-- Every text field can be typed into or connected to another ComfyUI STRING output.
-- Use the matching **× Text N** control to remove any individual field, including either of the initial two fields.
-- All text fields are optional, so removing every text field does not leave a required-input validation error.
-- Set a custom delimiter. The default is one space; commas, pipes, and newline separators work too.
-- Fields are concatenated in numeric order: text_1, text_2, text_3, and so on.
-- Empty fields are skipped, so they do not create duplicate delimiters.
-- Remaining dynamic fields restore by widget name on recent frontends and fall back to positional values for older workflow files.
+- Starts with two optional multiline text fields.
+- Use **Add Text** to create additional fields. Each field has a matching STRING input socket.
+- Every field has an individual remove control, including the first two default fields.
+- All text fields are optional, so the node remains valid when every field is removed.
+- Choose any delimiter, including spaces, commas, pipes, or newline characters. The default delimiter is one space.
+- Values are joined in numeric field order: Text 1, Text 2, Text 3, and so on.
+- Empty values are skipped, preventing unwanted repeated delimiters.
+- Remaining field values are restored when a workflow is reopened. Named widget values are preferred, with a positional fallback for older workflow data.
 
-The node returns one STRING output.
+The node returns a single STRING output.
 
 ### Multi LoRA Loader (Model Only) (Phantom God)
 
-Find **Multi LoRA Loader (Model Only) (Phantom God)** under **Phantom God / Model**.
+Find the node under **Phantom God / Model**.
 
-- Connect one **MODEL** input and receive one modified **MODEL** output.
-- There is deliberately no CLIP input or CLIP output. This node applies LoRAs to the diffusion model only.
-- Click **＋ Add LoRA** to add up to 64 rows.
-- Each row has its own LoRA file picker, strength control, **ON/OFF** toggle, and **×** remove button.
-- The file picker is populated from ComfyUI's current `/models/loras` endpoint. Use the refresh button after adding or removing LoRA files while ComfyUI is running.
-- Rows are applied in their displayed order. Disabled, blank, and zero-strength rows are skipped.
-- Strength supports negative and positive values from -100 to 100.
-- The selected files, strengths, toggles, and row order are saved with the workflow.
-- The backend uses ComfyUI's `comfy.utils.load_torch_file` and `comfy.sd.load_lora_for_models` APIs. It keeps only one raw LoRA state dictionary cached at a time rather than retaining a full stack of large tensors in node memory.
-- A missing or incompatible enabled LoRA produces a clear node execution error instead of silently returning an unchanged model.
+- Accepts one MODEL input and returns one modified MODEL output. It has no CLIP input or output.
+- Supports up to 64 ordered LoRA rows.
+- Each row has its own file selector, strength value, ON/OFF control, and remove button.
+- The selector reads the available files from ComfyUI's LoRA model directory endpoint. Use **Refresh** after adding or removing model files while ComfyUI is running.
+- Enabled rows are applied sequentially in their displayed order. Disabled, unselected, and zero-strength rows are skipped.
+- Strength values can range from -100 to +100.
+- Row order, filenames, strengths, and enabled states are saved with the workflow. The workflow stores references to model files, not copies of the LoRA weights.
+- The backend uses ComfyUI's safe tensor-loading and model-patching APIs. It retains at most one raw LoRA state dictionary in the node cache.
+- Changes to a LoRA file at the same path are detected using its file signature; the cached state dictionary is reloaded when the file changes.
+- Missing or incompatible enabled LoRAs produce a node execution error with the affected filename.
 
-## Install
+## Installation
 
-Run this from your ComfyUI custom_nodes directory:
+1. Close ComfyUI.
+2. Open a terminal in the ComfyUI custom_nodes directory.
+3. Clone this repository:
 
 ~~~~bash
 git clone https://github.com/midnight-god-01/phantom-god-comfyui-nodes.git
 ~~~~
 
-Restart the ComfyUI server, then hard-refresh the browser (Ctrl+Shift+R).
+4. Start ComfyUI again and refresh the browser interface.
 
-## Update
+The repository does not require a separate pip or npm installation step. It uses the Python and frontend APIs provided by ComfyUI.
+
+## Updating
+
+From the custom node directory, run:
 
 ~~~~bash
 cd phantom-god-comfyui-nodes
 git pull
 ~~~~
 
-Restart ComfyUI and hard-refresh the browser after updating.
+Restart the ComfyUI server after updating Python code. Then refresh the browser interface. A browser refresh alone does not reload Python node definitions.
 
-## Add future features
+## Compatibility
 
-The package uses automatic feature discovery. You do not need to edit the root __init__.py when adding another Python node.
+The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. The compatibility review used ComfyUI core 0.45.0 with its bundled frontend 1.58.5, and standalone frontend 1.61.2. ComfyUI frontend APIs can evolve independently of the core application, so behavior may vary across frontend builds.
 
-1. Create a new Python module inside features/, for example features/my_new_node.py.
-2. Define your node class in that file.
-3. Export NODE_CLASS_MAPPINGS and, optionally, NODE_DISPLAY_NAME_MAPPINGS from that module.
+The Auto Arrange Graph extension uses ComfyUI's extension registration and canvas-menu APIs. It reads graph links through the current Map-based link collection rather than patching legacy canvas prototypes.
+
+The Concatenate Text node uses dynamically named optional STRING inputs. Its frontend keeps each widget, socket, and remove control synchronized.
+
+The Multi LoRA Loader stores its interface state in node properties and inserts that state into the hidden backend input when ComfyUI builds the execution prompt. The backend applies LoRAs to MODEL only, using no CLIP object.
+
+## Troubleshooting
+
+- **A node does not appear:** Confirm the repository is located at ComfyUI/custom_nodes/phantom-god-comfyui-nodes and that the server was restarted.
+- **The browser controls do not appear:** Refresh the browser after restarting ComfyUI. Check the browser developer console for messages beginning with [Phantom God].
+- **A LoRA is missing from the selector:** Confirm the file is inside one of ComfyUI's configured LoRA directories, then use the selector's Refresh control.
+- **A saved workflow reports a missing LoRA:** Restore the referenced file or choose an available replacement in the node.
+- **A node fails during startup:** Check the ComfyUI terminal for Python import errors and confirm the installed ComfyUI version meets the minimum requirement.
+- **The arrange commands are not visible:** Right-click an empty area of the graph canvas rather than a node.
+
+## Development
+
+The repository keeps backend features, frontend extensions, and tests separate:
+
+~~~~text
+.
+├── __init__.py
+├── features/
+│   ├── __init__.py
+│   ├── concatenate_text.py
+│   └── multi_lora_model_only.py
+├── web/
+│   └── js/
+│       ├── concatenateText.js
+│       ├── graphArrange.js
+│       └── multiLoraModelOnly.js
+├── tests/
+├── CHANGELOG.md
+├── LICENSE
+├── package.json
+└── pyproject.toml
+~~~~
+
+To add a Python node, create a module directly inside features/ and export NODE_CLASS_MAPPINGS. NODE_DISPLAY_NAME_MAPPINGS is optional. The feature registry discovers non-private Python modules in that directory and merges their mappings; duplicate mapping keys raise an error.
+
+A minimal node module looks like this:
 
 ~~~~python
-class MyNewNode:
+class ExampleNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {"text": ("STRING", {"default": ""})}}
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "run"
-    CATEGORY = "Phantom God/My Category"
+    CATEGORY = "Phantom God/Examples"
 
     def run(self, text):
         return (text,)
 
-NODE_CLASS_MAPPINGS = {"PhantomGodMyNewNode": MyNewNode}
-NODE_DISPLAY_NAME_MAPPINGS = {"PhantomGodMyNewNode": "My New Node"}
+
+NODE_CLASS_MAPPINGS = {"PhantomGodExampleNode": ExampleNode}
+NODE_DISPLAY_NAME_MAPPINGS = {"PhantomGodExampleNode": "Example Node"}
 ~~~~
 
-4. When a node needs custom frontend behavior, create a separate JavaScript file directly inside web/js/, for example web/js/myNewNode.js. Register it with app.registerExtension() and give it a unique extension name. Keep each frontend feature in its own file.
-5. Add tests under tests/, then run the checks below.
+For frontend behavior, add a JavaScript module directly inside web/js/ and register it with app.registerExtension(). Add regression tests under tests/.
 
-The registry imports every non-private Python module directly inside features/ and merges its node mappings. Private modules whose names start with an underscore are ignored. Avoid duplicate node mapping keys.
-
-## Development checks
-
-No third-party Python or JavaScript runtime dependencies are required by this repository.
+Run the validation commands from the repository root:
 
 ~~~~bash
 python -m py_compile __init__.py features/*.py
-python -m unittest discover -s tests -p 'test_*.py'
+python -m unittest discover -s tests -p 'test_*.py' -v
 node --check web/js/graphArrange.js
 node --check web/js/concatenateText.js
 node --check web/js/multiLoraModelOnly.js
 node --test
 ~~~~
 
-GitHub Actions runs the Python and JavaScript checks on pushes and pull requests. Dependabot checks workflow actions weekly.
+GitHub Actions runs the Python checks, feature-registry checks, JavaScript syntax checks, and frontend tests on pushes and pull requests.
 
-## Compatibility and implementation
+## Attribution and licensing
 
-The package targets ComfyUI v0.45.0 and newer. The current compatibility audit checked core v0.45.0 with its bundled frontend 1.58.5, plus standalone frontend 1.61.2. The Python entry point exports NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, and WEB_DIRECTORY = "./web/js". Python node definitions are loaded from features/; frontend extension files are loaded from web/js/.
+The Auto Arrange Graph implementation is adapted from the graph-arrangement feature in [pythongosssss/ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts/blob/609f3afaa74b2f88ef9ce8d939626065e3247469/web/js/graphArrange.js), Copyright (c) 2023 pythongosssss. The upstream project is MIT-licensed; its copyright attribution is retained in this repository's LICENSE file.
 
-Concatenate Text uses an optional-input mapping that accepts dynamically named STRING inputs. Its frontend adds/removes the matching widget and socket together, and restores the remaining text widget values when a workflow is reopened.
-
-Multi LoRA Loader stores its UI state in node properties and injects that state into a hidden STRING input during graphToPrompt. The Python backend applies enabled LoRAs sequentially to MODEL using ComfyUI's model patching API and passes no CLIP object to the loader API.
-
-Auto Arrange Graph continues to use ComfyUI's app.registerExtension() and getCanvasMenuItems() APIs. It does not patch LGraphCanvas prototypes or import deprecated /scripts/ui.js APIs.
-
-## Troubleshooting
-
-1. Confirm the repository is directly inside ComfyUI/custom_nodes/phantom-god-comfyui-nodes/ and that its root __init__.py is present.
-2. Restart the ComfyUI server after updating. A browser refresh alone cannot load new Python node definitions.
-3. Hard-refresh the browser after the server restarts.
-4. Confirm the ComfyUI startup log contains no import error for phantom-god-comfyui-nodes.
-5. Open the browser developer console and check for [Phantom God] messages from the frontend extensions.
-6. Auto Arrange Graph commands appear when right-clicking an empty canvas area. Concatenate Text appears under Phantom God / Text. Multi LoRA Loader appears under Phantom God / Model.
-7. If the LoRA dropdown is stale after copying a new model file, use its refresh button. Ensure the LoRA is inside one of ComfyUI's configured `loras` model directories.
-
-## Source and attribution
-
-The Auto Arrange Graph placement behavior is adapted from the Auto Arrange Graph script in [pythongosssss/ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts). The upstream MIT copyright notice is retained in LICENSE.
+The remaining original Phantom God project code is Copyright (c) 2026 midnight-god-01. This project is distributed under the MIT License. See LICENSE for the complete license text.

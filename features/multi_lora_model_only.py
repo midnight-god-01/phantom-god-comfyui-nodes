@@ -40,6 +40,21 @@ def _parse_state(raw_state):
             raise ValueError("The LoRA name in row {} must be text.".format(position))
         name = name.strip().replace("\\", "/")
 
+        # Workflow files are user-controlled input. Accept relative paths so
+        # LoRAs can live in subdirectories, but reject absolute paths and
+        # traversal segments before passing a name to ComfyUI's path resolver.
+        if name and (
+            "\x00" in name
+            or name.startswith("/")
+            or (len(name) >= 2 and name[1] == ":")
+            or any(part in ("", ".", "..") for part in name.split("/"))
+        ):
+            raise ValueError(
+                "The LoRA name in row {} must be a relative path inside the LoRA folder.".format(
+                    position
+                )
+            )
+
         enabled = row.get("on", True) is True
         try:
             strength = float(row.get("strength", 1.0))
@@ -88,9 +103,9 @@ class PhantomGodMultiLoraModelOnly:
     SEARCH_ALIASES = ["lora", "multi lora", "model only lora", "lora stack", "apply loras"]
 
     def __init__(self):
-        # Keep only one LoRA tensor dictionary in memory at a time. The patched
-        # MODEL retains its own patches, avoiding a second in-memory copy of the stack.
-        self._cached_lora_path = None
+        # Keep at most one raw LoRA state dictionary in memory. The key includes
+        # the file signature so replacing a file at the same path reloads it.
+        self._cached_lora_signature = None
         self._cached_lora = None
         self._cached_metadata = None
 
@@ -113,7 +128,14 @@ class PhantomGodMultiLoraModelOnly:
                 try:
                     path = folder_paths.get_full_path_or_raise("loras", name)
                     stat = os.stat(path)
-                    stamps.append("{}:{}:{}".format(name, stat.st_size, stat.st_mtime_ns))
+                    stamps.append(
+                        "{}:{}:{}:{}".format(
+                            name,
+                            stat.st_size,
+                            stat.st_mtime_ns,
+                            getattr(stat, "st_ino", 0),
+                        )
+                    )
                 except Exception:
                     stamps.append("{}:missing".format(name))
             return "|".join(stamps)
@@ -121,12 +143,20 @@ class PhantomGodMultiLoraModelOnly:
             return "invalid-lora-stack-state"
 
     def _load_lora(self, path):
+        import os
         import comfy.utils
 
-        if path == self._cached_lora_path and self._cached_lora is not None:
+        stat = os.stat(path)
+        signature = (
+            path,
+            stat.st_size,
+            getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000)),
+            getattr(stat, "st_ino", 0),
+        )
+        if signature == self._cached_lora_signature and self._cached_lora is not None:
             return self._cached_lora, self._cached_metadata
 
-        self._cached_lora_path = None
+        self._cached_lora_signature = None
         self._cached_lora = None
         self._cached_metadata = None
 
@@ -139,7 +169,7 @@ class PhantomGodMultiLoraModelOnly:
             lora = comfy.utils.load_torch_file(path, safe_load=True)
             metadata = None
 
-        self._cached_lora_path = path
+        self._cached_lora_signature = signature
         self._cached_lora = lora
         self._cached_metadata = metadata
         return lora, metadata
