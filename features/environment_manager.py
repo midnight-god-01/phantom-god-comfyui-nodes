@@ -437,9 +437,6 @@ def _triton_report(env):
         return result
 
     minimum_python, maximum_python = python_bounds
-    if windows and target["minor"] == 9:
-        # triton-windows 3.9 does not publish Python 3.10 wheels.
-        minimum_python = (3, 11)
     if python_pair < minimum_python or python_pair > maximum_python:
         result.update(
             status="Unsupported Python",
