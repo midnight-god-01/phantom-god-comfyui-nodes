@@ -113,7 +113,7 @@ function loadExtension() {
         api,
         document,
         window: { LiteGraph: { vueNodesMode: false } },
-        console: { info() {}, warn() {} },
+        console: { info() {}, warn() {}, error() {} },
     });
     assert.equal(extensions.length, 1);
     return { extension: extensions[0], app, document };
