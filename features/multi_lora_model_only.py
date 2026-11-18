@@ -133,7 +133,16 @@ class PhantomGodMultiLoraModelOnly:
     OUTPUT_TOOLTIPS = ("The input model with enabled LoRAs applied in row order.",)
     FUNCTION = "apply"
     CATEGORY = "Phantom God/Model"
-    SEARCH_ALIASES = ["lora", "multi lora", "model only lora", "lora stack", "apply loras"]
+    SEARCH_ALIASES = [
+        "lora",
+        "multi lora",
+        "multi lora loader",
+        "lora loader",
+        "load lora",
+        "apply lora",
+        "model only lora",
+        "lora stack",
+    ]
 
     def __init__(self):
         # Keep at most one raw LoRA state dictionary in memory. The key includes
