@@ -50,6 +50,7 @@ SAGE_MIN_CUDA_BY_CAPABILITY = {
 }
 PYPI_INDEX = "https://pypi.org/pypi/{}/json"
 INSTALL_TIMEOUT_SECONDS = 1800
+IMPORT_CHECK_TIMEOUT_SECONDS = 30
 _JOB_LOCK = threading.Lock()
 _INSTALL_LOCK = threading.Lock()
 _JOBS = {}
@@ -277,13 +278,44 @@ def _distribution_version(name):
 
 
 def _safe_import_status(module_name):
+    """Check an optional native package in a child interpreter.
+
+    Importing Triton or SageAttention in ComfyUI itself can keep native DLLs
+    loaded while the Environment Manager is replacing their distributions.
+    A subprocess verifies the same Python environment without contaminating
+    the long-running ComfyUI process or reusing stale sys.modules entries.
+    """
+    script = (
+        "import importlib, json, sys\\n"
+        "module = importlib.import_module(sys.argv[1])\\n"
+        "print(json.dumps(getattr(module, '__version__', None)))\\n"
+    )
     try:
-        importlib.invalidate_caches()
-        spec = importlib.util.find_spec(module_name)
-        if spec is None:
-            return False, "Python cannot find the module."
-        module = importlib.import_module(module_name)
-        return True, getattr(module, "__version__", None)
+        result = subprocess.run(
+            [sys.executable, "-c", script, module_name],
+            capture_output=True,
+            text=True,
+            timeout=IMPORT_CHECK_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            if not detail:
+                detail = "Import check exited with code {}.".format(result.returncode)
+            return False, detail[-500:]
+
+        lines = (result.stdout or "").strip().splitlines()
+        if not lines:
+            return False, "The import check did not return a module version."
+        try:
+            version = json.loads(lines[-1])
+        except (TypeError, ValueError):
+            return False, "The import check returned an invalid version response."
+        return True, version
+    except subprocess.TimeoutExpired:
+        return False, "Import check timed out after {} seconds.".format(
+            IMPORT_CHECK_TIMEOUT_SECONDS
+        )
     except Exception as exc:
         return False, "{}: {}".format(type(exc).__name__, str(exc)[:500])
 
