@@ -43,7 +43,7 @@ function makeDocument() {
     };
 }
 
-function loadExtension(report) {
+function loadExtension(report, vueNodesMode = true) {
     const script = source
         .replace('import { app } from "../../scripts/app.js";\n', "")
         .replace('import { api } from "../../scripts/api.js";\n', "");
@@ -62,7 +62,7 @@ function loadExtension(report) {
     };
     runInNewContext(script, {
         app, api, document,
-        window: { LiteGraph: { vueNodesMode: true } },
+        window: { LiteGraph: { vueNodesMode } },
         console: { info() {}, warn() {}, error() {} },
     });
     return { extension: extensions[0], document, requests };
@@ -107,8 +107,8 @@ async function flushPromises() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-function setup() {
-    const { extension, document, requests } = loadExtension(makeReport());
+function setup({ vueNodesMode = true, requiredHeight = null, size = [430, 440] } = {}) {
+    const { extension, document, requests } = loadExtension(makeReport(), vueNodesMode);
     class Node {
         onRemoved() {}
     }
@@ -117,8 +117,17 @@ function setup() {
     Object.assign(node, {
         type: "PhantomGodEnvironmentManager",
         comfyClass: "PhantomGodEnvironmentManager",
-        size: [430, 440],
+        size: [...size],
         widgets: [],
+        sizeCalls: 0,
+        computeSize() {
+            const content = this.__phantomGodEnvWidget?.computeLayoutSize?.().minHeight ?? 430;
+            return [430, requiredHeight ?? (content + 20)];
+        },
+        setSize(next) {
+            this.size = [...next];
+            this.sizeCalls += 1;
+        },
         addDOMWidget(name, type, element, options) {
             const widget = { name, type, element, options };
             this.widgets.push(widget);
@@ -179,6 +188,18 @@ test("Environment Manager recomputes layout from the rendered content", async ()
     assert.ok(layout.minHeight > 600);
     assert.equal(layout.minWidth, 390);
     assert.equal(node.__phantomGodEnvWidget.options.getMinHeight(), layout.minHeight);
+});
+
+
+test("Classic LiteGraph expands the Environment Manager node to its rendered widget size", () => {
+    const { node } = setup({
+        vueNodesMode: false,
+        requiredHeight: 760,
+        size: [350, 200],
+    });
+
+    assert.deepEqual(Array.from(node.size), [430, 760]);
+    assert.equal(node.sizeCalls, 1);
 });
 
 test("removing the node releases its DOM root and stops client polling", async () => {
