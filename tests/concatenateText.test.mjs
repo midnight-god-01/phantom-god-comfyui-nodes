@@ -52,16 +52,15 @@ function loadExtension() {
     const document = makeDocument();
     const app = {
         graph: { _nodes: [], setDirtyCanvas() {} },
-        async graphToPrompt() {
-            return {
-                output: {
-                    "1": {
-                        class_type: "PhantomGodConcatenateText",
-                        inputs: { text_1: "first", text_2: "second" },
-                    },
+        __promptResult: {
+            output: {
+                "1": {
+                    class_type: "PhantomGodConcatenateText",
+                    inputs: { text_1: "first", text_2: "second" },
                 },
-            };
+            },
         },
+        async graphToPrompt() { return this.__promptResult; },
         registerExtension(extension) { extensions.push(extension); },
     };
     const ComfyWidgets = {
@@ -76,7 +75,7 @@ function loadExtension() {
     runInNewContext(script, {
         app, ComfyWidgets, document,
         window: { LiteGraph: { vueNodesMode: false } },
-        console: { info() {}, error() {} },
+        console: { info() {}, warn() {}, error() {} },
     });
     return { extension: extensions[0], document, app };
 }
@@ -161,6 +160,29 @@ test("Add Text creates a field and each field has an individual toggle", () => {
     assert.equal(node.properties.phantomGodTextRemoveState["3"], undefined);
 });
 
+
+test("Classic LiteGraph expands Concatenate Text as field controls grow", () => {
+    const { node } = setupNode();
+    node.size = [420, 180];
+    node.sizeCalls = 0;
+    node.computeSize = () => [
+        420,
+        200 + node.__phantomGodTextControls.computeLayoutSize().minHeight,
+    ];
+    node.setSize = (size) => {
+        node.size = [...size];
+        node.sizeCalls += 1;
+    };
+
+    const addButton = node.__phantomGodTextControlRoot.children[2].children[0];
+    addButton.click();
+    addButton.click();
+
+    const requiredHeight = node.computeSize()[1];
+    assert.ok(node.size[1] >= requiredHeight);
+    assert.ok(node.sizeCalls > 0);
+});
+
 test("OFF toggles exclude text fields from workflow execution", async () => {
     const { node, app } = setupNode();
     const firstRow = node.__phantomGodTextControlRoot.children[1].children[0];
@@ -214,6 +236,64 @@ test("restores old positional workflow values for non-contiguous fields", () => 
     assert.equal(node.widgets.find((widget) => widget.name === "text_1").value, "one");
     assert.equal(node.widgets.find((widget) => widget.name === "text_3").value, "three");
 });
+
+
+test("prompt injection follows each repeated nested subgraph execution path", async () => {
+    const { node: innerNode, app } = setupNode();
+    innerNode.id = 5;
+    innerNode.properties.phantomGodTextRemoveState = { "1": true };
+
+    const sharedDefinition = { _nodes: [innerNode] };
+    const firstInstance = { id: 10, subgraph: sharedDefinition };
+    const secondInstance = { id: 11, subgraph: sharedDefinition };
+    app.graph = { _nodes: [firstInstance, secondInstance] };
+    app.__promptResult = {
+        output: {
+            "10:5": {
+                class_type: "PhantomGodConcatenateText",
+                inputs: { text_1: "native-a" },
+            },
+            "11:5": {
+                class_type: "PhantomGodConcatenateText",
+                inputs: { text_1: "native-b" },
+            },
+        },
+    };
+
+    const prompt = await app.graphToPrompt();
+    assert.equal(prompt.output["10:5"].inputs.text_1, "");
+    assert.equal(prompt.output["11:5"].inputs.text_1, "");
+});
+
+test("prompt injection does not apply root node state to an unmatched nested ID", async () => {
+    const { node, app } = setupNode();
+    node.properties.phantomGodTextRemoveState = { "1": true };
+    app.__promptResult = {
+        output: {
+            "999:1": {
+                class_type: "PhantomGodConcatenateText",
+                inputs: { text_1: "preserve-this" },
+            },
+        },
+    };
+
+    const prompt = await app.graphToPrompt();
+    assert.equal(prompt.output["999:1"].inputs.text_1, "preserve-this");
+});
+
+test("removing a field marks the graph as changed for workflow persistence", () => {
+    const { node } = setupNode();
+    const changes = { changed: 0, versions: 0 };
+    node.graph = {
+        change() { changes.changed += 1; },
+        incrementVersion() { changes.versions += 1; },
+    };
+    node.__phantomGodTextControlRoot.children[2].children[0].click();
+    node.__phantomGodTextControlRoot.children[1].children[2].children[2].click();
+    assert.equal(changes.changed, 1);
+    assert.equal(changes.versions, 1);
+});
+
 
 test("does not patch unrelated node definitions", () => {
     const { extension } = loadExtension();

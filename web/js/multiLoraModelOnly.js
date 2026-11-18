@@ -412,8 +412,10 @@ function setupNode(node) {
 
 function buildNodeIndex() {
     const index = new Map();
-    const visit = (graph, prefix) => {
-        if (!graph) return;
+    const visit = (graph, prefix, ancestors = new Set()) => {
+        if (!graph || ancestors.has(graph)) return;
+        const nextAncestors = new Set(ancestors);
+        nextAncestors.add(graph);
         for (const node of (graph._nodes || graph.nodes || [])) {
             if (!node) continue;
             const compositeId = String(prefix) + node.id;
@@ -422,7 +424,9 @@ function buildNodeIndex() {
                 if (!index.has(String(node.id))) index.set(String(node.id), node);
             }
             const inner = node.subgraph || node.graph || node._graph;
-            if (inner && inner !== graph) visit(inner, compositeId + ":");
+            if (inner && inner !== graph) {
+                visit(inner, compositeId + ":", nextAncestors);
+            }
         }
     };
     visit(app.graph, "");
@@ -430,10 +434,9 @@ function buildNodeIndex() {
 }
 
 function findNode(index, promptId) {
-    const key = String(promptId);
-    if (index.has(key)) return index.get(key);
-    const tail = key.includes(":") ? key.slice(key.lastIndexOf(":") + 1) : "";
-    return tail && index.has(tail) ? index.get(tail) : null;
+    // Execution IDs for nested subgraphs are path-qualified. Never fall back
+    // to a local tail ID: different subgraphs commonly reuse the same node ID.
+    return index.get(String(promptId)) ?? null;
 }
 
 function installPromptStateInjection() {

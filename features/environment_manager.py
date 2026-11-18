@@ -23,6 +23,19 @@ TRITON_MINOR_MAP = {
     (2, 12): 7, (2, 13): 7, (2, 14): 8, (2, 15): 9,
 }
 TRITON_WINDOWS_MAP = {**TRITON_MINOR_MAP, (2, 15): 9}
+# Official Triton release wheel Python ranges by Triton minor.
+TRITON_PYTHON_BOUNDS = {
+    1: ((3, 8), (3, 12)),
+    2: ((3, 9), (3, 13)),
+    3: ((3, 9), (3, 13)),
+    4: ((3, 9), (3, 13)),
+    5: ((3, 10), (3, 14)),
+    6: ((3, 10), (3, 14)),
+    7: ((3, 10), (3, 14)),
+    8: ((3, 10), (3, 14)),
+    # Triton 3.9 uses cp312-abi3 wheels, compatible through Python 3.15.
+    9: ((3, 11), (3, 15)),
+}
 SAGE_SUPPORTED_COMPUTE_CAPABILITIES = {
     (8, 0), (8, 6), (8, 9), (9, 0), (10, 0), (12, 0), (12, 1),
 }
@@ -37,6 +50,7 @@ SAGE_MIN_CUDA_BY_CAPABILITY = {
 }
 PYPI_INDEX = "https://pypi.org/pypi/{}/json"
 INSTALL_TIMEOUT_SECONDS = 1800
+IMPORT_CHECK_TIMEOUT_SECONDS = 30
 _JOB_LOCK = threading.Lock()
 _INSTALL_LOCK = threading.Lock()
 _JOBS = {}
@@ -264,13 +278,44 @@ def _distribution_version(name):
 
 
 def _safe_import_status(module_name):
+    """Check an optional native package in a child interpreter.
+
+    Importing Triton or SageAttention in ComfyUI itself can keep native DLLs
+    loaded while the Environment Manager is replacing their distributions.
+    A subprocess verifies the same Python environment without contaminating
+    the long-running ComfyUI process or reusing stale sys.modules entries.
+    """
+    script = (
+        "import importlib, json, sys; "
+        "module = importlib.import_module(sys.argv[1]); "
+        "print(json.dumps(getattr(module, '__version__', None)))"
+    )
     try:
-        importlib.invalidate_caches()
-        spec = importlib.util.find_spec(module_name)
-        if spec is None:
-            return False, "Python cannot find the module."
-        module = importlib.import_module(module_name)
-        return True, getattr(module, "__version__", None)
+        result = subprocess.run(
+            [sys.executable, "-c", script, module_name],
+            capture_output=True,
+            text=True,
+            timeout=IMPORT_CHECK_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            if not detail:
+                detail = "Import check exited with code {}.".format(result.returncode)
+            return False, detail[-500:]
+
+        lines = (result.stdout or "").strip().splitlines()
+        if not lines:
+            return False, "The import check did not return a module version."
+        try:
+            version = json.loads(lines[-1])
+        except (TypeError, ValueError):
+            return False, "The import check returned an invalid version response."
+        return True, version
+    except subprocess.TimeoutExpired:
+        return False, "Import check timed out after {} seconds.".format(
+            IMPORT_CHECK_TIMEOUT_SECONDS
+        )
     except Exception as exc:
         return False, "{}: {}".format(type(exc).__name__, str(exc)[:500])
 
@@ -382,47 +427,78 @@ def _triton_report(env):
                     .format(target["minor"]),
         )
         return result
-    if target["minor"] >= 5 and sys.version_info < (3, 10):
-        result.update(status="Unsupported Python", message="Triton 3.{} requires Python 3.10 or newer.".format(target["minor"]))
-        return result
-    if windows and target["minor"] >= 9 and sys.version_info < (3, 11):
-        result.update(status="Unsupported Python", message="Triton 3.9 Windows wheels require Python 3.11 or newer.")
-        return result
-    result["supported"] = True
-    if windows and legacy_version:
-        coexist = " alongside triton-windows" if installed else ""
+    python_pair = _parse_version_pair(env.get("python") or platform.python_version())
+    python_bounds = TRITON_PYTHON_BOUNDS.get(target["minor"])
+    if not python_pair or not python_bounds:
         result.update(
-            status="Package conflict",
-            message="Legacy 'triton' {} is installed{}. The Windows build uses 'triton-windows'; the installer will remove the conflicting legacy distribution."
-                    .format(legacy_version, coexist),
+            status="Compatibility unknown",
+            message="The Python compatibility range for Triton 3.{} is not configured.".format(target["minor"]),
         )
+        return result
+
+    minimum_python, maximum_python = python_bounds
+    if python_pair < minimum_python or python_pair > maximum_python:
+        result.update(
+            status="Unsupported Python",
+            message=(
+                "Triton 3.{} supports Python {}.{} through {}.{} on {}. "
+                "This environment is Python {}.{}."
+            ).format(
+                target["minor"],
+                minimum_python[0], minimum_python[1],
+                maximum_python[0], maximum_python[1],
+                "Windows" if windows else "Linux",
+                python_pair[0], python_pair[1],
+            ),
+        )
+        return result
+
+    result["supported"] = True
     try:
         latest = _latest_pypi_version(target["package"], target["minor"])
         result["latest"] = latest
     except Exception as exc:
         result["latest_error"] = str(exc)[:250]
+
+    install_status = "Not installed"
+    install_message = "Compatible Triton 3.{} is available for this PyTorch environment.".format(target["minor"])
     if installed:
         installed_pair = _parse_version_pair(installed)
         if installed_pair != (3, target["minor"]):
-            result.update(status="Update required", message="Installed Triton {} does not match PyTorch's compatible 3.{} line."
-                          .format(installed, target["minor"]))
+            install_status = "Update required"
+            install_message = "Installed Triton {} does not match PyTorch's compatible 3.{} line.".format(installed, target["minor"])
         elif result["latest"] and _version_sort_key(installed) < _version_sort_key(result["latest"]):
-            result.update(status="Update available", message="Triton {} is installed; {} is the latest published build in the compatible 3.{} line."
-                          .format(installed, result["latest"], target["minor"]))
+            install_status = "Update available"
+            install_message = "Triton {} is installed; {} is the latest published build in the compatible 3.{} line.".format(installed, result["latest"], target["minor"])
         elif not result["latest"]:
-            result.update(status="Compatible", message="Installed Triton matches PyTorch's compatible 3.{} line; latest patch could not be confirmed online."
-                          .format(target["minor"]))
+            install_status = "Compatible"
+            install_message = "Installed Triton matches PyTorch's compatible 3.{} line; latest patch could not be confirmed online.".format(target["minor"])
         else:
-            result.update(status="Up to date", message="Installed Triton matches the latest published build in the compatible 3.{} line."
-                          .format(target["minor"]))
+            install_status = "Up to date"
+            install_message = "Installed Triton matches the latest published build in the compatible 3.{} line.".format(target["minor"])
+
+    if windows and legacy_version:
+        coexist = " alongside triton-windows" if installed else ""
+        result.update(
+            status="Package conflict",
+            message=(
+                "Legacy 'triton' {} is installed{}. The Windows build uses "
+                "'triton-windows'; the installer will remove the conflicting "
+                "legacy distribution. Current triton-windows state: {} — {}"
+            ).format(legacy_version, coexist, install_status, install_message),
+        )
     else:
-        result.update(status="Not installed", message="Compatible Triton 3.{} is available for this PyTorch environment."
-                      .format(target["minor"]))
+        result.update(status=install_status, message=install_message)
+
     result["import_ok"], result["import_detail"] = _safe_import_status("triton") if installed else (False, None)
     if installed and not result["import_ok"]:
-        result["status"] = "Import failed"
-        result["message"] = "Triton is installed but cannot be imported: {}".format(result["import_detail"])
+        if result["status"] == "Package conflict":
+            result["message"] += " The installed Triton module also fails to import: {}.".format(result["import_detail"])
+        else:
+            result["status"] = "Import failed"
+            result["message"] = "Triton is installed but cannot be imported: {}".format(result["import_detail"])
     return result
+
 
 
 def _sage_report(env):
@@ -470,6 +546,9 @@ def _sage_report(env):
     triton_target = _triton_target(env["torch"], env["system"])
     triton_distribution = triton_target["distribution"] if triton_target else None
     triton_version = _distribution_version(triton_distribution) if triton_distribution else None
+    legacy_windows_triton = (
+        _distribution_version("triton") if env.get("system") == "Windows" else None
+    )
     triton_import_ok, triton_import_detail = (
         _safe_import_status("triton") if triton_version else (False, "The PyTorch-compatible Triton package is not installed.")
     )
@@ -478,6 +557,7 @@ def _sage_report(env):
         and triton_version
         and _parse_version_pair(triton_version) == (3, triton_target["minor"])
         and triton_import_ok
+        and not legacy_windows_triton
     )
     result["triton_version"] = triton_version
     result["triton_target"] = ("3.{}".format(triton_target["minor"]) if triton_target else None)
@@ -487,7 +567,11 @@ def _sage_report(env):
         result["import_ok"], result["import_detail"] = _safe_import_status("sageattention")
 
     if not triton_ready:
-        detail = triton_import_detail or "The installed Triton version does not match the active PyTorch compatibility line."
+        detail = (
+            "Conflicting legacy 'triton' {} distribution is installed on Windows.".format(legacy_windows_triton)
+            if legacy_windows_triton
+            else triton_import_detail or "The installed Triton version does not match the active PyTorch compatibility line."
+        )
         result.update(
             supported=False,
             status="Prerequisite missing",

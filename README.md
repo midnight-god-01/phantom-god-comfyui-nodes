@@ -2,7 +2,7 @@
 
 A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
 
-**Current version:** 1.5.4  
+**Current version:** 1.5.6  
 **Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
@@ -44,13 +44,13 @@ Find the node under **Phantom God / Model**.
 - Row order, filenames, strengths, and enabled states are saved with the workflow. The workflow stores references to model files, not copies of the LoRA weights.
 - The backend uses ComfyUI's safe tensor-loading and model-patching APIs. It retains at most one raw LoRA state dictionary in the node cache.
 - Changes to a LoRA file at the same path are detected using its file signature; the cached state dictionary is reloaded when the file changes.
-- Missing or incompatible enabled LoRAs produce a node execution error with the affected filename.
+- Missing LoRAs and LoRAs with no compatible diffusion-model weights produce a node execution error with the affected filename. If a LoRA contains some matching model weights plus unrelated weights, ComfyUI may still log warnings for the unmatched keys.
 
 
 
-### Node UI audit (1.5.2)
+### Node UI audit (1.5.5)
 
-The Concatenate Text and Multi LoRA controls use width-aware layouts and preserve ComfyUI's native multiline widget behavior. Concatenate Text has an individual ON/OFF toggle and a separate delete button for every field; OFF fields are excluded from the execution prompt, including linked inputs. Multi LoRA has no fixed row-count limit, measures its live DOM content (including loading and error states), and hides its serialized JSON state in both Classic LiteGraph and Nodes 2.0. Environment Manager measures its live DOM content and stops polling when its node is removed.
+The Concatenate Text and Multi LoRA controls use width-aware layouts and preserve ComfyUI's native multiline widget behavior. Concatenate Text has an individual ON/OFF toggle and a separate delete button for every field; OFF fields are excluded from the execution prompt, including linked inputs. Nested subgraph prompt state is matched by full execution path to avoid applying one node's state to another node with the same local ID. Multi LoRA has no fixed row-count limit, measures its live DOM content (including loading and error states), hides its serialized state in Classic LiteGraph and Nodes 2.0, and reports when a selected LoRA adds no diffusion-model patches. Environment Manager measures its live DOM content, only scans after an explicit user action, checks interpreter compatibility against published Triton wheel ranges, and blocks SageAttention while a conflicting legacy Windows Triton package is installed.
 
 ### Environment Manager (Phantom God)
 
@@ -58,12 +58,12 @@ Find the node under **Phantom God / System**. It inspects the active ComfyUI Pyt
 
 - Reports the exact Python executable, Python version, pip availability/version, PyTorch version, PyTorch CUDA runtime, CUDA availability, NVIDIA GPU, compute capability, and driver version when available.
 - Checks Triton against the PyTorch-compatible version line. On Windows it uses the `triton-windows` distribution; on Linux it uses the official `triton` distribution.
-- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It requires the exact Triton minor matched to the active PyTorch version, with a successful import. The wheel check also enforces CUDA 12.0+ and SageAttention's published compute-capability targets. It uses the Comfy-Org wheel index and does not guess a nearby build.
+- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It requires the exact Triton minor matched to the active PyTorch version, with a successful import. Triton and SageAttention import checks run in isolated child interpreters so native DLLs are not held open in ComfyUI during package replacement. The wheel check also enforces CUDA 12.0+ and SageAttention's published compute-capability targets. It uses the Comfy-Org wheel index and does not guess a nearby build.
 - Installs into the same Python executable that is running ComfyUI. Triton and SageAttention have separate install/update controls; install a compatible Triton build before SageAttention.
 - Does not upgrade, uninstall, or replace PyTorch or its dependencies. Installs use pip with dependency resolution disabled.
 - Requires a restart of ComfyUI after a successful installation before testing the package.
 
-The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels currently target compute capabilities 8.0, 8.6, 8.9, 9.0, 10.0, 12.0, and 12.1. CUDA minimums are architecture-specific: 12.0 for Ampere, 12.4 for Ada, 12.3 for Hopper, and 12.8 for Blackwell. If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build. Environment Manager is a manual utility; it is not an automatic workflow output and does not run on every queued prompt.
+The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels currently target compute capabilities 8.0, 8.6, 8.9, 9.0, 10.0, 12.0, and 12.1. CUDA minimums are architecture-specific: 12.0 for Ampere, 12.4 for Ada, 12.3 for Hopper, and 12.8 for Blackwell. If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build. Environment Manager is a manual utility; it is not an automatic workflow output. It does not scan when the node is created; checks run only after selecting Check All or a package-specific Check button.
 
 ## Installation
 
@@ -92,7 +92,7 @@ Restart the ComfyUI server after updating Python code. Then refresh the browser 
 
 ## Compatibility
 
-The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. The compatibility review used ComfyUI core 0.45.0 with its bundled frontend 1.58.5, and standalone frontend 1.61.2. ComfyUI frontend APIs can evolve independently of the core application, so behavior may vary across frontend builds.
+The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. Triton 3.9 compatibility checks include Python 3.15, matching the current stable-ABI wheel support for the PyTorch 2.15 line. The compatibility review cross-checked current ComfyUI core and standalone frontend source on November 18, 2026, in addition to retaining the declared minimum of ComfyUI 0.45.0. The repository's CI checks mocked Python and frontend behavior; it does not perform GPU inference against an installed ComfyUI runtime. Frontend APIs can evolve independently of the core application, so behavior may vary across frontend builds.
 
 The Auto Arrange Graph extension uses ComfyUI's extension registration and canvas-menu APIs. It reads graph links through the current Map-based link collection rather than patching legacy canvas prototypes.
 

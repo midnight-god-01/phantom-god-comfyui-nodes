@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -7,9 +9,60 @@ from features.environment_manager import (
     _sage_report,
     _select_sage_wheel,
     _triton_target,
+    _triton_report,
+    _safe_import_status,
     PhantomGodEnvironmentManager,
     _version_sort_key,
 )
+
+
+class IsolatedImportCheckTests(unittest.TestCase):
+    def test_import_check_runs_in_a_child_interpreter(self):
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout='"3.9.0"', stderr=""
+        )
+        with patch(
+            "features.environment_manager.subprocess.run",
+            return_value=completed,
+        ) as run, patch(
+            "features.environment_manager.importlib.import_module",
+            side_effect=AssertionError("must not import native modules in ComfyUI"),
+        ):
+            imported, version = _safe_import_status("triton")
+
+        self.assertTrue(imported)
+        self.assertEqual(version, "3.9.0")
+        args, kwargs = run.call_args
+        self.assertEqual(args[0][0], sys.executable)
+        self.assertEqual(args[0][1], "-c")
+        self.assertIn("importlib.import_module", args[0][2])
+        self.assertEqual(args[0][-1], "triton")
+        self.assertTrue(kwargs["capture_output"])
+        self.assertTrue(kwargs["text"])
+        self.assertEqual(kwargs["timeout"], 30)
+
+    def test_import_check_reports_child_process_errors(self):
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="ImportError: missing native runtime"
+        )
+        with patch(
+            "features.environment_manager.subprocess.run",
+            return_value=completed,
+        ):
+            imported, detail = _safe_import_status("sageattention")
+
+        self.assertFalse(imported)
+        self.assertIn("missing native runtime", detail)
+
+    def test_import_check_reports_timeout(self):
+        with patch(
+            "features.environment_manager.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(sys.executable, 30),
+        ):
+            imported, detail = _safe_import_status("triton")
+
+        self.assertFalse(imported)
+        self.assertIn("timed out after 30 seconds", detail)
 
 
 class EnvironmentManagerCompatibilityTests(unittest.TestCase):
@@ -32,6 +85,113 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
 
     def test_unknown_linux_triton_mapping_is_not_guessed(self):
         self.assertIsNone(_triton_target("2.16.0+cu130", "Linux"))
+
+
+    def test_triton_rejects_python_above_official_wheel_range(self):
+        env = {
+            "torch": "2.13.1+cu130", "python": "3.15.0",
+            "system": "Linux", "machine": "x86_64",
+            "cuda_available": True, "cuda": "13.0", "capability": [8, 6],
+        }
+        with patch("features.environment_manager._latest_pypi_version", return_value="3.7.1"), patch(
+            "features.environment_manager._distribution_version", return_value=None
+        ):
+            report = _triton_report(env)
+        self.assertFalse(report["supported"])
+        self.assertEqual(report["status"], "Unsupported Python")
+        self.assertIn("through 3.14", report["message"])
+
+    def test_triton_39_accepts_python_315_on_linux(self):
+        env = {
+            "torch": "2.15.0+cu130", "python": "3.15.0",
+            "system": "Linux", "machine": "x86_64",
+            "cuda_available": True, "cuda": "13.0", "capability": [8, 6],
+        }
+        with patch(
+            "features.environment_manager._latest_pypi_version",
+            return_value="3.9.0",
+        ), patch(
+            "features.environment_manager._distribution_version",
+            return_value=None,
+        ):
+            report = _triton_report(env)
+
+        self.assertTrue(report["supported"])
+        self.assertEqual(report["status"], "Not installed")
+        self.assertEqual(report["target_minor"], 9)
+
+    def test_triton_windows_39_accepts_python_315_abi3_wheel(self):
+        env = {
+            "torch": "2.15.0+cu130", "python": "3.15.0",
+            "system": "Windows", "machine": "AMD64",
+            "cuda_available": True, "cuda": "13.0", "capability": [8, 6],
+        }
+        with patch(
+            "features.environment_manager._latest_pypi_version",
+            return_value="3.9.0.post30",
+        ), patch(
+            "features.environment_manager._distribution_version",
+            return_value=None,
+        ):
+            report = _triton_report(env)
+
+        self.assertTrue(report["supported"])
+        self.assertEqual(report["status"], "Not installed")
+        self.assertEqual(report["target_minor"], 9)
+
+    def test_triton_rejects_python_below_supported_minimum(self):
+        env = {
+            "torch": "2.10.1+cu128", "python": "3.8.18",
+            "system": "Linux", "machine": "x86_64",
+            "cuda_available": True, "cuda": "12.8", "capability": [8, 6],
+        }
+        report = _triton_report(env)
+        self.assertFalse(report["supported"])
+        self.assertEqual(report["status"], "Unsupported Python")
+        self.assertIn("Python 3.10", report["message"])
+
+    def test_triton_preserves_windows_legacy_package_conflict_status(self):
+        env = {
+            "torch": "2.15.0+cu130", "python": "3.13.0",
+            "system": "Windows", "machine": "AMD64",
+            "cuda_available": True, "cuda": "13.0", "capability": [8, 6],
+        }
+        def package_version(name):
+            return {"triton": "3.2.0", "triton-windows": "3.9.0"}.get(name)
+        with patch("features.environment_manager._distribution_version", side_effect=package_version), patch(
+            "features.environment_manager._latest_pypi_version", return_value="3.9.1"
+        ), patch("features.environment_manager._safe_import_status", return_value=(True, None)):
+            report = _triton_report(env)
+        self.assertTrue(report["supported"])
+        self.assertEqual(report["status"], "Package conflict")
+        self.assertIn("Legacy 'triton' 3.2.0", report["message"])
+        self.assertIn("Current triton-windows state: Update available", report["message"])
+
+    def test_windows_sageattention_is_blocked_by_legacy_triton_conflict(self):
+        wheel = {
+            "version": "2.2.0+cu130torch215",
+            "url": "https://example.invalid/sageattention.whl",
+        }
+        env = {
+            "torch": "2.15.0+cu130", "python": "3.13.0", "cuda": "13.0",
+            "cuda_available": True, "system": "Windows",
+            "machine": "AMD64", "capability": [8, 6],
+        }
+        def package_version(name):
+            return {
+                "sageattention": wheel["version"],
+                "triton-windows": "3.9.0",
+                "triton": "3.2.0",
+            }.get(name)
+        with patch("features.environment_manager._load_sage_wheels", return_value=([wheel], None)), patch(
+            "features.environment_manager._select_sage_wheel", return_value=(wheel, "Exact match")
+        ), patch("features.environment_manager._distribution_version", side_effect=package_version), patch(
+            "features.environment_manager._safe_import_status", return_value=(True, None)
+        ):
+            report = _sage_report(env)
+        self.assertFalse(report["supported"])
+        self.assertEqual(report["status"], "Prerequisite missing")
+        self.assertIn("Conflicting legacy 'triton' 3.2.0", report["triton_note"])
 
     def test_post_release_sorts_after_base_version(self):
         self.assertGreater(_version_sort_key("3.6.0.post2"), _version_sort_key("3.6.0"))

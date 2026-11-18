@@ -156,6 +156,26 @@ function updateEnvironmentLayout(node) {
     widget.options.getMaxHeight = () => 900;
 }
 
+function fitClassicNode(node) {
+    if (
+        window.LiteGraph?.vueNodesMode ||
+        typeof node.computeSize !== "function" ||
+        typeof node.setSize !== "function"
+    ) return;
+
+    const current = Array.isArray(node.size) ? node.size : [430, 440];
+    const required = node.computeSize();
+    if (!Array.isArray(required)) return;
+
+    const next = [
+        Math.max(390, Number(current[0]) || 0, Number(required[0]) || 0),
+        Math.max(Number(current[1]) || 0, Number(required[1]) || 0),
+    ];
+    if (next[0] !== current[0] || next[1] !== current[1]) {
+        node.setSize(next);
+    }
+}
+
 function render(node) {
     const root = node.__phantomGodEnvRoot;
     if (!root) return;
@@ -198,6 +218,10 @@ function render(node) {
         root.appendChild(element("div", "pg-env-message pg-env-error", node.__phantomGodEnvError));
     }
     updateEnvironmentLayout(node);
+    // Classic LiteGraph stores the widget row inside the node's serialized
+    // size. Recompute it after each render so full environment reports and
+    // installation logs are not clipped. Nodes 2.0 reads widget constraints.
+    fitClassicNode(node);
     node.setDirtyCanvas?.(true, true);
     app.graph?.setDirtyCanvas?.(true, true);
 }
@@ -282,11 +306,7 @@ function setupNode(node) {
     widget.computeLayoutSize = () => ({ minHeight: 430, maxHeight: 900, minWidth: 390 });
     node.__phantomGodEnvWidget = widget;
 
-    if (!node.size || node.size[0] < 390) {
-        node.size = [430, Math.max(node.size?.[1] || 0, 440)];
-    }
     render(node);
-    checkEnvironment(node);
 }
 
 function patchNodeType(nodeType) {

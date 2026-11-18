@@ -71,6 +71,43 @@ def _parse_state(raw_state):
     return result
 
 
+
+def _model_patch_delta(previous_model, patched_model):
+    """Return True/False when ComfyUI's model-patcher state exposes a delta."""
+    if previous_model is None or patched_model is None:
+        return None
+
+    before_uuid = getattr(previous_model, "patches_uuid", None)
+    after_uuid = getattr(patched_model, "patches_uuid", None)
+    if before_uuid is not None and after_uuid is not None and before_uuid != after_uuid:
+        return True
+
+    inspected = False
+    before_patches = getattr(previous_model, "patches", None)
+    after_patches = getattr(patched_model, "patches", None)
+    if isinstance(before_patches, dict) and isinstance(after_patches, dict):
+        inspected = True
+        for key, entries in after_patches.items():
+            old_entries = before_patches.get(key, ())
+            try:
+                if len(entries) > len(old_entries):
+                    return True
+            except TypeError:
+                if entries is not old_entries:
+                    return True
+
+    for attribute in ("object_patches", "weight_wrapper_patches"):
+        before = getattr(previous_model, attribute, None)
+        after = getattr(patched_model, attribute, None)
+        if isinstance(before, dict) and isinstance(after, dict):
+            inspected = True
+            for key, value in after.items():
+                if key not in before or before[key] is not value:
+                    return True
+
+    return False if inspected or (before_uuid is not None and after_uuid is not None) else None
+
+
 class PhantomGodMultiLoraModelOnly:
     """Apply a configurable stack of LoRAs to MODEL only (no CLIP input/output)."""
 
@@ -160,8 +197,11 @@ class PhantomGodMultiLoraModelOnly:
             lora, metadata = comfy.utils.load_torch_file(
                 path, safe_load=True, return_metadata=True
             )
-        except TypeError:
-            # Older ComfyUI builds do not accept return_metadata.
+        except TypeError as exc:
+            # Only fall back when an older ComfyUI rejects this keyword;
+            # preserve TypeErrors raised while actually deserializing weights.
+            if "return_metadata" not in str(exc):
+                raise
             lora = comfy.utils.load_torch_file(path, safe_load=True)
             metadata = None
 
@@ -197,14 +237,18 @@ class PhantomGodMultiLoraModelOnly:
                 path = folder_paths.get_full_path_or_raise("loras", name)
                 lora, metadata = self._load_lora(path)
                 # Match ComfyUI's native LoraLoaderModelOnly execution path.
+                previous_model = current_model
                 current_model, _ = comfy.sd.load_lora_for_models(
-                    current_model, None, lora, strength, 0.0,
+                    previous_model, None, lora, strength, 0.0,
                     lora_metadata=metadata,
                 )
                 if current_model is None:
+                    raise RuntimeError("ComfyUI did not return a patched MODEL.")
+                if _model_patch_delta(previous_model, current_model) is False:
                     raise RuntimeError(
-                        "ComfyUI did not return a patched MODEL. The LoRA may "
-                        "contain no compatible diffusion-model weights."
+                        "The LoRA contains no weights compatible with this diffusion model. "
+                        "Check whether it was trained for this model architecture or only "
+                        "contains text-encoder weights."
                     )
                 applied += 1
             except TypeError as exc:
@@ -215,11 +259,16 @@ class PhantomGodMultiLoraModelOnly:
                         "Phantom God Multi LoRA: could not apply {!r}: {}".format(name, exc)
                     ) from exc
                 try:
+                    previous_model = current_model
                     current_model, _ = comfy.sd.load_lora_for_models(
-                        current_model, None, lora, strength, 0.0
+                        previous_model, None, lora, strength, 0.0
                     )
                     if current_model is None:
                         raise RuntimeError("ComfyUI returned an empty MODEL.")
+                    if _model_patch_delta(previous_model, current_model) is False:
+                        raise RuntimeError(
+                            "The LoRA contains no weights compatible with this diffusion model."
+                        )
                     applied += 1
                 except Exception as fallback_exc:
                     raise RuntimeError(
