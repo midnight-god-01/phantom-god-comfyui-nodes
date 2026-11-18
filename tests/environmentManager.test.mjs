@@ -155,6 +155,29 @@ test("does not scan the environment when the node is created", async () => {
     assert.match(node.__phantomGodEnvRoot.children[1].children[1].textContent, /Select Check Environment/);
 });
 
+test("shows a visible error widget when addDOMWidget is unavailable", () => {
+    const { extension } = loadExtension(makeReport());
+    class Node {
+        onNodeCreated() {}
+        onAdded() {}
+        onRemoved() {}
+    }
+    extension.beforeRegisterNodeDef(Node, { name: "PhantomGodEnvironmentManager" });
+    const node = new Node();
+    node.type = "PhantomGodEnvironmentManager";
+    node.widgets = [];
+    node.addWidget = (...args) => {
+        node.fallbackArgs = args;
+        return { name: args[1] };
+    };
+
+    node.onAdded();
+
+    assert.ok(node.__phantomGodEnvFallbackWidget);
+    assert.equal(node.fallbackArgs[1], "Environment Manager UI error");
+    assert.match(node.fallbackArgs[2], /addDOMWidget API/);
+});
+
 test("initializes Environment Manager from the node-added fallback", () => {
     const { extension } = loadExtension(makeReport());
     class Node {
