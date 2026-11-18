@@ -348,5 +348,38 @@ class MultiLoraNodeTests(unittest.TestCase):
         )
 
 
+    def test_accepts_legacy_loader_api_without_metadata_keyword(self):
+        model = types.SimpleNamespace(
+            patches_uuid=object(), patches={}, object_patches={}, weight_wrapper_patches={},
+        )
+        patched = types.SimpleNamespace(
+            patches_uuid=object(),
+            patches={"layer.weight": [("lora",)]},
+            object_patches={},
+            weight_wrapper_patches={},
+        )
+        folder_paths = types.SimpleNamespace(
+            get_full_path_or_raise=lambda category, name: "/loras/" + name
+        )
+        utils = types.SimpleNamespace(load_torch_file=MagicMock(return_value=({"weight": 1}, None)))
+        calls = []
+        def old_loader(current, clip, weights, strength, clip_strength):
+            calls.append((current, clip, strength, clip_strength))
+            return patched, None
+        sd = types.SimpleNamespace(load_lora_for_models=old_loader)
+        package = fake_comfy(sd, utils)
+        stat = types.SimpleNamespace(st_size=1, st_mtime=1, st_mtime_ns=1, st_ino=1)
+        with patch.dict(sys.modules, {
+            "folder_paths": folder_paths, "comfy": package,
+            "comfy.sd": sd, "comfy.utils": utils,
+        }), patch("os.stat", return_value=stat):
+            result = PhantomGodMultiLoraModelOnly().apply(
+                model,
+                json.dumps({"loras": [{"name": "old-api.safetensors", "strength": 1}]})
+            )
+        self.assertIs(result[0], patched)
+        self.assertEqual(calls, [(model, None, 1.0, 0.0)])
+
+
 if __name__ == "__main__":
     unittest.main()
