@@ -215,6 +215,65 @@ test("restores old positional workflow values for non-contiguous fields", () => 
     assert.equal(node.widgets.find((widget) => widget.name === "text_3").value, "three");
 });
 
+
+test("prompt injection follows each repeated nested subgraph execution path", async () => {
+    const { app } = loadExtension();
+    const { node: innerNode } = setupNode();
+    innerNode.id = 5;
+    innerNode.properties.phantomGodTextRemoveState = { "1": true };
+
+    const sharedDefinition = { _nodes: [innerNode] };
+    const firstInstance = { id: 10, subgraph: sharedDefinition };
+    const secondInstance = { id: 11, subgraph: sharedDefinition };
+    app.graph = { _nodes: [firstInstance, secondInstance] };
+    app.graphToPrompt = async () => ({
+        output: {
+            "10:5": {
+                class_type: "PhantomGodConcatenateText",
+                inputs: { text_1: "native-a" },
+            },
+            "11:5": {
+                class_type: "PhantomGodConcatenateText",
+                inputs: { text_1: "native-b" },
+            },
+        },
+    });
+
+    const prompt = await app.graphToPrompt();
+    assert.equal(prompt.output["10:5"].inputs.text_1, "");
+    assert.equal(prompt.output["11:5"].inputs.text_1, "");
+});
+
+test("prompt injection does not apply root node state to an unmatched nested ID", async () => {
+    const { node, app } = setupNode();
+    node.properties.phantomGodTextRemoveState = { "1": true };
+    app.graphToPrompt = async () => ({
+        output: {
+            "999:1": {
+                class_type: "PhantomGodConcatenateText",
+                inputs: { text_1: "preserve-this" },
+            },
+        },
+    });
+
+    const prompt = await app.graphToPrompt();
+    assert.equal(prompt.output["999:1"].inputs.text_1, "preserve-this");
+});
+
+test("removing a field marks the graph as changed for workflow persistence", () => {
+    const { node } = setupNode();
+    const changes = { changed: 0, versions: 0 };
+    node.graph = {
+        change() { changes.changed += 1; },
+        incrementVersion() { changes.versions += 1; },
+    };
+    node.__phantomGodTextControlRoot.children[2].children[0].click();
+    node.__phantomGodTextControlRoot.children[1].children[2].children[2].click();
+    assert.equal(changes.changed, 1);
+    assert.equal(changes.versions, 1);
+});
+
+
 test("does not patch unrelated node definitions", () => {
     const { extension } = loadExtension();
     const NodeType = makeNodeType();
