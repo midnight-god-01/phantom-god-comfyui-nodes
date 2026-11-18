@@ -171,9 +171,7 @@ class PhantomGodMultiLoraModelOnly:
         return lora, metadata
 
     def apply(self, model, LoraStackState="{}", **kwargs):
-        # ComfyUI hidden STRING inputs are injected into the execution prompt
-        # by the frontend. Accept historical casing/extra hidden arguments
-        # without allowing a stale default to silently erase the stack.
+        """Apply each enabled LoRA in order, cloning model patches sequentially."""
         if LoraStackState in (None, ""):
             LoraStackState = kwargs.get("lora_stack_state", "{}")
         if model is None:
@@ -192,28 +190,45 @@ class PhantomGodMultiLoraModelOnly:
 
         current_model = model
         applied = 0
-
         for row in active_rows:
             name = row["name"]
             strength = row["strength"]
-
             try:
                 path = folder_paths.get_full_path_or_raise("loras", name)
                 lora, metadata = self._load_lora(path)
-
-                try:
-                    current_model, _ = comfy.sd.load_lora_for_models(
-                        current_model, None, lora, strength, 0.0, lora_metadata=metadata
+                # This is the same model-only path used by ComfyUI's native
+                # LoraLoaderModelOnly: MODEL, None, state, strength, 0.
+                current_model, _ = comfy.sd.load_lora_for_models(
+                    current_model, None, lora, strength, 0.0,
+                    lora_metadata=metadata,
+                )
+                if current_model is None:
+                    raise RuntimeError(
+                        "ComfyUI did not return a patched MODEL. The LoRA may "
+                        "contain no compatible diffusion-model weights."
                     )
-                except TypeError:
-                    # Compatibility with ComfyUI versions predating lora_metadata.
+                applied += 1
+            except TypeError as exc:
+                # Retain support for older core versions only when the
+                # unsupported keyword is the cause, not when internal code
+                # raises an unrelated TypeError.
+                if "lora_metadata" not in str(exc):
+                    raise RuntimeError(
+                        "Phantom God Multi LoRA: could not apply {!r}: {}".format(name, exc)
+                    ) from exc
+                try:
                     current_model, _ = comfy.sd.load_lora_for_models(
                         current_model, None, lora, strength, 0.0
                     )
-
-                if current_model is None:
-                    raise RuntimeError("ComfyUI returned an empty MODEL after applying the LoRA.")
-                applied += 1
+                    if current_model is None:
+                        raise RuntimeError("ComfyUI returned an empty MODEL.")
+                    applied += 1
+                except Exception as fallback_exc:
+                    raise RuntimeError(
+                        "Phantom God Multi LoRA: could not apply {!r}: {}".format(
+                            name, fallback_exc
+                        )
+                    ) from fallback_exc
             except Exception as exc:
                 raise RuntimeError(
                     "Phantom God Multi LoRA: could not apply {!r}: {}".format(name, exc)
