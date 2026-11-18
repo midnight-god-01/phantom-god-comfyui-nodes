@@ -183,6 +183,26 @@ test("Classic LiteGraph expands Concatenate Text as field controls grow", () => 
     assert.ok(node.sizeCalls > 0);
 });
 
+test("removes orphaned native text widgets after graph configuration", () => {
+    const { node } = setupNode();
+    for (let index = 3; index <= 9; index++) {
+        node.widgets.push({
+            name: "text_" + index,
+            value: "orphan",
+            options: {},
+            onRemove() { this.removed = true; },
+        });
+    }
+    node.inputs = node.inputs.filter((input) => input.name === "text_1" || input.name === "text_2");
+
+    node.onAfterGraphConfigured();
+
+    assert.deepEqual(
+        node.widgets.filter((widget) => /^text_\\d+$/.test(widget.name)).map((widget) => widget.name),
+        ["text_1", "text_2"],
+    );
+});
+
 test("OFF toggles exclude text fields from workflow execution", async () => {
     const { node, app } = setupNode();
     const firstRow = node.__phantomGodTextControlRoot.children[1].children[0];
