@@ -13,6 +13,58 @@ from features.environment_manager import (
 )
 
 
+class IsolatedImportCheckTests(unittest.TestCase):
+    def test_import_check_runs_in_a_child_interpreter(self):
+        completed = types.SimpleNamespace(
+            returncode=0,
+            stdout='"3.9.0"\\n',
+            stderr="",
+        )
+        with patch(
+            "features.environment_manager.subprocess.run",
+            return_value=completed,
+        ) as run, patch(
+            "features.environment_manager.importlib.import_module",
+            side_effect=AssertionError("must not import native modules in ComfyUI"),
+        ):
+            imported, version = _safe_import_status("triton")
+
+        self.assertTrue(imported)
+        self.assertEqual(version, "3.9.0")
+        args, kwargs = run.call_args
+        self.assertEqual(args[0][0], __import__("sys").executable)
+        self.assertEqual(args[0][1:3], ["-c", args[0][2]])
+        self.assertEqual(args[0][-1], "triton")
+        self.assertTrue(kwargs["capture_output"])
+        self.assertTrue(kwargs["text"])
+        self.assertEqual(kwargs["timeout"], 30)
+
+    def test_import_check_reports_child_process_errors(self):
+        completed = types.SimpleNamespace(
+            returncode=1,
+            stdout="",
+            stderr="ImportError: missing native runtime",
+        )
+        with patch(
+            "features.environment_manager.subprocess.run",
+            return_value=completed,
+        ):
+            imported, detail = _safe_import_status("sageattention")
+
+        self.assertFalse(imported)
+        self.assertIn("missing native runtime", detail)
+
+    def test_import_check_reports_timeout(self):
+        with patch(
+            "features.environment_manager.subprocess.run",
+            side_effect=__import__("subprocess").TimeoutExpired("python", 30),
+        ):
+            imported, detail = _safe_import_status("triton")
+
+        self.assertFalse(imported)
+        self.assertIn("timed out after 30 seconds", detail)
+
+
 class EnvironmentManagerCompatibilityTests(unittest.TestCase):
     def test_triton_windows_tracks_pytorch_minor(self):
         target = _triton_target("2.15.0+cu130", "Windows")
