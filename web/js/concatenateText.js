@@ -268,6 +268,8 @@ function removeTextInput(node, index) {
     const state = getRemoveState(node);
     delete state[index];
     node.properties.phantomGodTextRemoveState = state;
+    node.graph?.change?.();
+    node.graph?.incrementVersion?.();
     renderTextControls(node);
     refreshNode(node);
 }
@@ -392,10 +394,10 @@ function patchNodeType(nodeType) {
 
 function buildConcatenateNodeIndex() {
     const index = new Map();
-    const seen = new Set();
-    const visit = (graph, prefix = "") => {
-        if (!graph || seen.has(graph)) return;
-        seen.add(graph);
+    const visit = (graph, prefix = "", ancestors = new Set()) => {
+        if (!graph || ancestors.has(graph)) return;
+        const nextAncestors = new Set(ancestors);
+        nextAncestors.add(graph);
         for (const candidate of (graph._nodes || graph.nodes || [])) {
             if (!candidate) continue;
             const compositeId = prefix + candidate.id;
@@ -404,7 +406,9 @@ function buildConcatenateNodeIndex() {
                 if (!index.has(String(candidate.id))) index.set(String(candidate.id), candidate);
             }
             const inner = candidate.subgraph || candidate.graph || candidate._graph;
-            if (inner && inner !== graph) visit(inner, compositeId + ":");
+            if (inner && inner !== graph) {
+                visit(inner, compositeId + ":", nextAncestors);
+            }
         }
     };
     visit(app.graph);
@@ -424,8 +428,13 @@ function installConcatenatePromptInjection() {
             if (entry?.class_type !== NODE_TYPE) continue;
             index ??= buildConcatenateNodeIndex();
             const id = String(promptId);
-            const node = index.get(id) || index.get(id.split(":").at(-1));
-            if (!node) continue;
+            // Nested execution IDs are path-qualified. A local-ID fallback
+            // can target a different node when several subgraphs reuse IDs.
+            const node = index.get(id);
+            if (!node) {
+                console.warn("[Phantom God] Could not match Concatenate Text node", id, "to a canvas node; preserving its generated inputs.");
+                continue;
+            }
             entry.inputs ??= {};
             for (const fieldIndex of getTextInputIndices(node.inputs)) {
                 if (isRemoved(node, fieldIndex)) {
