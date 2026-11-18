@@ -272,6 +272,58 @@ test("injects row state into the hidden ComfyUI prompt input", async () => {
     ]);
 });
 
+
+test("prompt injection resolves repeated nested subgraph instances independently", async () => {
+    const { extension, app } = loadExtension();
+    const node = makeNode();
+    node.id = 5;
+    node.properties.phantomGodModelLoraState = JSON.stringify({
+        loras: [{ name: "style-a.safetensors", on: true, strength: 0.7 }],
+    });
+    const sharedDefinition = { _nodes: [node] };
+    const firstInstance = { id: 10, subgraph: sharedDefinition };
+    const secondInstance = { id: 11, subgraph: sharedDefinition };
+    app.graph = { _nodes: [firstInstance, secondInstance] };
+    app.graphToPrompt = async () => ({
+        output: {
+            "10:5": {
+                class_type: "PhantomGodMultiLoraModelOnly",
+                inputs: { model: ["base", 0] },
+            },
+            "11:5": {
+                class_type: "PhantomGodMultiLoraModelOnly",
+                inputs: { model: ["base", 0] },
+            },
+        },
+    });
+
+    const prompt = await app.graphToPrompt();
+    for (const id of ["10:5", "11:5"]) {
+        const state = JSON.parse(prompt.output[id].inputs.LoraStackState);
+        assert.deepEqual(state.loras, [
+            { name: "style-a.safetensors", on: true, strength: 0.7 },
+        ]);
+    }
+});
+
+test("prompt injection preserves state for unmatched nested execution IDs", async () => {
+    const { app } = loadExtension();
+    const node = makeNode();
+    app.graph = { _nodes: [node] };
+    app.graphToPrompt = async () => ({
+        output: {
+            "999:1": {
+                class_type: "PhantomGodMultiLoraModelOnly",
+                inputs: { model: ["base", 0], LoraStackState: "existing-state" },
+            },
+        },
+    });
+
+    const prompt = await app.graphToPrompt();
+    assert.equal(prompt.output["999:1"].inputs.LoraStackState, "existing-state");
+});
+
+
 test("removes an individual LoRA row, including an empty row", async () => {
     const { extension, app } = loadExtension();
     const node = makeNode();
