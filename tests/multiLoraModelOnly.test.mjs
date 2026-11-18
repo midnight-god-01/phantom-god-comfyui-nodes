@@ -149,6 +149,22 @@ function readRows(node) {
     return JSON.parse(node.properties.phantomGodModelLoraState || '{"loras":[]}').loras;
 }
 
+test("initializes Multi LoRA from the node-added fallback", async () => {
+    const { extension } = loadExtension();
+    class Node {
+        onNodeCreated() {}
+        onAdded() {}
+        onRemoved() {}
+    }
+    extension.beforeRegisterNodeDef(Node, { name: "PhantomGodMultiLoraModelOnly" });
+    const node = Object.assign(new Node(), makeNode());
+    node.onAdded();
+    await flushPromises();
+
+    assert.ok(node.__phantomGodLoraRoot);
+    assert.ok(node.__phantomGodLoraWidget);
+});
+
 test("registers a model-only multi-LoRA frontend extension", () => {
     const { extension } = loadExtension();
     assert.equal(extension.name, "PhantomGod.MultiLoraModelOnly");
