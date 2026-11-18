@@ -188,5 +188,33 @@ class MultiLoraNodeTests(unittest.TestCase):
                 }))
 
 
+    def test_accepts_none_hidden_state_as_empty_stack(self):
+        model = object()
+        self.assertIs(self.node.apply(model, None)[0], model)
+
+    def test_accepts_legacy_lowercase_hidden_state_argument(self):
+        model = object()
+        self.assertIs(
+            self.node.apply(model, None, lora_stack_state="{}")[0],
+            model,
+        )
+
+    def test_missing_lora_error_identifies_the_filename(self):
+        folder_paths = types.SimpleNamespace(
+            get_full_path_or_raise=MagicMock(side_effect=FileNotFoundError("missing"))
+        )
+        package = fake_comfy()
+        with patch.dict(sys.modules, {
+            "folder_paths": folder_paths,
+            "comfy": package,
+            "comfy.sd": package.sd,
+            "comfy.utils": package.utils,
+        }):
+            with self.assertRaisesRegex(RuntimeError, "missing.safetensors"):
+                self.node.apply(object(), json.dumps({
+                    "loras": [{"name": "missing.safetensors", "on": True, "strength": 1.0}]
+                }))
+
+
 if __name__ == "__main__":
     unittest.main()
