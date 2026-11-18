@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from features.multi_lora_model_only import (
     PhantomGodMultiLoraModelOnly,
+    _model_patch_delta,
     _parse_state,
 )
 
@@ -276,6 +277,75 @@ class MultiLoraNodeTests(unittest.TestCase):
                     model,
                     json.dumps({"loras": [{"name": "a.safetensors", "strength": 1}]})
                 )
+
+
+    def test_rejects_lora_when_comfyui_adds_no_model_patches(self):
+        original_uuid = object()
+        model = types.SimpleNamespace(
+            patches_uuid=original_uuid,
+            patches={},
+            object_patches={},
+            weight_wrapper_patches={},
+        )
+        unchanged = types.SimpleNamespace(
+            patches_uuid=original_uuid,
+            patches={},
+            object_patches={},
+            weight_wrapper_patches={},
+        )
+        folder_paths = types.SimpleNamespace(
+            get_full_path_or_raise=lambda category, name: "/loras/" + name
+        )
+        utils = types.SimpleNamespace(load_torch_file=MagicMock(return_value=({"text_encoder.weight": 1}, None)))
+        sd = types.SimpleNamespace(load_lora_for_models=lambda *args, **kwargs: (unchanged, None))
+        package = fake_comfy(sd, utils)
+        stat = types.SimpleNamespace(st_size=1, st_mtime=1, st_mtime_ns=1, st_ino=1)
+        with patch.dict(sys.modules, {
+            "folder_paths": folder_paths,
+            "comfy": package,
+            "comfy.sd": sd,
+            "comfy.utils": utils,
+        }), patch("os.stat", return_value=stat):
+            with self.assertRaisesRegex(RuntimeError, "no weights compatible"):
+                PhantomGodMultiLoraModelOnly().apply(
+                    model,
+                    json.dumps({"loras": [{"name": "text-only.safetensors", "strength": 1}]})
+                )
+
+    def test_detects_model_patches_added_to_existing_patch_keys(self):
+        before_uuid = object()
+        after_uuid = object()
+        before = types.SimpleNamespace(
+            patches_uuid=before_uuid,
+            patches={"layer.weight": [("old",)]},
+            object_patches={},
+            weight_wrapper_patches={},
+        )
+        after = types.SimpleNamespace(
+            patches_uuid=after_uuid,
+            patches={"layer.weight": [("old",), ("new",)]},
+            object_patches={},
+            weight_wrapper_patches={},
+        )
+        self.assertIs(_model_patch_delta(before, after), True)
+
+    def test_does_not_fallback_for_internal_lora_file_type_error(self):
+        utils = types.SimpleNamespace(
+            load_torch_file=MagicMock(side_effect=[
+                TypeError("tensor shape decode failed"),
+                ({"weight": 1}, None),
+            ])
+        )
+        package = fake_comfy(utils=utils)
+        with patch.dict(sys.modules, {"comfy": package, "comfy.utils": utils}), patch(
+            "os.stat",
+            return_value=types.SimpleNamespace(st_size=1, st_mtime=1, st_mtime_ns=1, st_ino=1),
+        ):
+            with self.assertRaisesRegex(TypeError, "tensor shape decode failed"):
+                PhantomGodMultiLoraModelOnly()._load_lora("/loras/test.safetensors")
+        utils.load_torch_file.assert_called_once_with(
+            "/loras/test.safetensors", safe_load=True, return_metadata=True
+        )
 
 
 if __name__ == "__main__":
