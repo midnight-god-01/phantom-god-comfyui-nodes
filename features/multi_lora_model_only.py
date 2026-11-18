@@ -196,8 +196,7 @@ class PhantomGodMultiLoraModelOnly:
             try:
                 path = folder_paths.get_full_path_or_raise("loras", name)
                 lora, metadata = self._load_lora(path)
-                # This is the same model-only path used by ComfyUI's native
-                # LoraLoaderModelOnly: MODEL, None, state, strength, 0.
+                # Match ComfyUI's native LoraLoaderModelOnly execution path.
                 current_model, _ = comfy.sd.load_lora_for_models(
                     current_model, None, lora, strength, 0.0,
                     lora_metadata=metadata,
@@ -209,9 +208,8 @@ class PhantomGodMultiLoraModelOnly:
                     )
                 applied += 1
             except TypeError as exc:
-                # Retain support for older core versions only when the
-                # unsupported keyword is the cause, not when internal code
-                # raises an unrelated TypeError.
+                # Only fall back for an older API that rejects this keyword;
+                # do not hide unrelated TypeErrors raised inside ComfyUI.
                 if "lora_metadata" not in str(exc):
                     raise RuntimeError(
                         "Phantom God Multi LoRA: could not apply {!r}: {}".format(name, exc)
