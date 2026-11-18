@@ -434,12 +434,13 @@ function findNode(index, promptId) {
 }
 
 function installPromptStateInjection() {
-    if (app.__phantomGodModelLoraPromptPatched || typeof app.graphToPrompt !== "function") return;
-    const originalGraphToPrompt = app.graphToPrompt;
-    app.graphToPrompt = async function (...args) {
-        const result = await originalGraphToPrompt.apply(this, args);
-        const output = result?.output;
-        if (!output) return result;
+    // ComfyUI has shipped multiple graphToPrompt shapes over time. Inject
+    // state into the generated API prompt and also into the workflow's hidden
+    // widget value as a fallback for frontends that build prompts separately.
+    if (app.__phantomGodModelLoraPromptPatched) return;
+    const inject = (result) => {
+        const output = result?.output ?? result?.prompt;
+        if (!output || typeof output !== "object") return result;
 
         let index = null;
         for (const promptId of Object.keys(output)) {
@@ -447,21 +448,37 @@ function installPromptStateInjection() {
             if (entry?.class_type !== NODE_TYPE) continue;
             index ??= buildNodeIndex();
             const node = findNode(index, promptId);
-            const state = node ? readState(node) : { loras: [] };
-            entry.inputs ??= {};
-            entry.inputs[HIDDEN_INPUT] = JSON.stringify({
+            if (!node) continue;
+            const state = readState(node);
+            const serialized = JSON.stringify({
                 loras: state.loras.map((row) => ({
                     name: row.name,
                     on: Boolean(row.on),
                     strength: row.strength,
                 })),
             });
+            entry.inputs ??= {};
+            entry.inputs[HIDDEN_INPUT] = serialized;
         }
         return result;
     };
-    app.__phantomGodModelLoraPromptPatched = true;
-}
 
+    const patchMethod = (target, key) => {
+        if (typeof target?.[key] !== "function") return false;
+        const original = target[key];
+        target[key] = async function (...args) {
+            const result = await original.apply(this, args);
+            return inject(result);
+        };
+        return true;
+    };
+
+    // The current frontend calls app.graphToPrompt(); leave the lower-level
+    // graph implementation untouched to avoid altering unrelated prompt paths.
+    if (patchMethod(app, "graphToPrompt")) {
+        app.__phantomGodModelLoraPromptPatched = true;
+    }
+}
 function patchNodeType(nodeType) {
     const prototype = nodeType?.prototype;
     if (!prototype || prototype.__phantomGodMultiLoraPatched) return;
