@@ -216,5 +216,67 @@ class MultiLoraNodeTests(unittest.TestCase):
                 }))
 
 
+    def test_declares_hidden_input_for_api_prompt_serialization(self):
+        hidden = PhantomGodMultiLoraModelOnly.INPUT_TYPES()["hidden"]
+        self.assertEqual(hidden["LoraStackState"][0], "STRING")
+        self.assertEqual(hidden["LoraStackState"][1]["default"], "{}")
+
+    def test_lora_application_uses_current_comfyui_metadata_argument(self):
+        model = object()
+        patched = object()
+        weights = {"weight": object()}
+        metadata = {"format": "test"}
+        folder_paths = types.SimpleNamespace(
+            get_full_path_or_raise=lambda category, name: "/loras/" + name
+        )
+        utils = types.SimpleNamespace(
+            load_torch_file=MagicMock(return_value=(weights, metadata))
+        )
+        calls = []
+        def load_for_models(current, clip, lora, strength, clip_strength, **kwargs):
+            calls.append((current, clip, lora, strength, clip_strength, kwargs))
+            return patched, None
+        sd = types.SimpleNamespace(load_lora_for_models=load_for_models)
+        package = fake_comfy(sd, utils)
+        stat = types.SimpleNamespace(st_size=1, st_mtime=1, st_mtime_ns=1, st_ino=1)
+        with patch.dict(sys.modules, {
+            "folder_paths": folder_paths,
+            "comfy": package,
+            "comfy.sd": sd,
+            "comfy.utils": utils,
+        }), patch("os.stat", return_value=stat):
+            result = PhantomGodMultiLoraModelOnly().apply(
+                model,
+                json.dumps({"loras": [{"name": "a.safetensors", "strength": 0.5}]})
+            )
+        self.assertIs(result[0], patched)
+        self.assertIs(calls[0][0], model)
+        self.assertIsNone(calls[0][1])
+        self.assertEqual(calls[0][3:5], (0.5, 0.0))
+        self.assertEqual(calls[0][5], {"lora_metadata": metadata})
+
+    def test_does_not_mask_internal_type_error_as_api_compatibility(self):
+        model = object()
+        folder_paths = types.SimpleNamespace(
+            get_full_path_or_raise=lambda category, name: "/loras/a.safetensors"
+        )
+        utils = types.SimpleNamespace(load_torch_file=MagicMock(return_value=({"weight": 1}, None)))
+        sd = types.SimpleNamespace(
+            load_lora_for_models=MagicMock(side_effect=TypeError("internal tensor error"))
+        )
+        package = fake_comfy(sd, utils)
+        with patch.dict(sys.modules, {
+            "folder_paths": folder_paths,
+            "comfy": package,
+            "comfy.sd": sd,
+            "comfy.utils": utils,
+        }), patch("os.stat", return_value=types.SimpleNamespace(st_size=1, st_mtime=1, st_mtime_ns=1, st_ino=1)):
+            with self.assertRaisesRegex(RuntimeError, "internal tensor error"):
+                PhantomGodMultiLoraModelOnly().apply(
+                    model,
+                    json.dumps({"loras": [{"name": "a.safetensors", "strength": 1}]})
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
