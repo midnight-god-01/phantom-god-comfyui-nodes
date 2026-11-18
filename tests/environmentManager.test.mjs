@@ -110,6 +110,8 @@ async function flushPromises() {
 function setup({ vueNodesMode = true, requiredHeight = null, size = [430, 440] } = {}) {
     const { extension, document, requests } = loadExtension(makeReport(), vueNodesMode);
     class Node {
+        onNodeCreated() {}
+        onAdded() {}
         onRemoved() {}
     }
     extension.beforeRegisterNodeDef(Node, { name: "PhantomGodEnvironmentManager" });
@@ -151,6 +153,35 @@ test("does not scan the environment when the node is created", async () => {
     assert.equal(requests.check, 0);
     assert.equal(node.__phantomGodEnvReport, undefined);
     assert.match(node.__phantomGodEnvRoot.children[1].children[1].textContent, /Select Check Environment/);
+});
+
+test("initializes Environment Manager from the node-added fallback", () => {
+    const { extension } = loadExtension(makeReport());
+    class Node {
+        onNodeCreated() {}
+        onAdded() {}
+        onRemoved() {}
+    }
+    extension.beforeRegisterNodeDef(Node, { name: "PhantomGodEnvironmentManager" });
+    const node = new Node();
+    Object.assign(node, {
+        type: "PhantomGodEnvironmentManager",
+        comfyClass: "PhantomGodEnvironmentManager",
+        size: [430, 440],
+        widgets: [],
+        addDOMWidget(name, type, element, options) {
+            const widget = { name, type, element, options };
+            this.widgets.push(widget);
+            return widget;
+        },
+        setDirtyCanvas() {},
+    });
+
+    node.onAdded();
+
+    assert.ok(node.__phantomGodEnvRoot);
+    assert.ok(node.__phantomGodEnvWidget);
+    assert.equal(node.__phantomGodEnvRoot.children.length, 5);
 });
 
 test("runs an environment scan only after an explicit Check All action", async () => {
