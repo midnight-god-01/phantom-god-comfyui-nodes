@@ -230,8 +230,31 @@ function element(tag, className, text) {
     return item;
 }
 
+function fitClassicNode(node) {
+    if (
+        window.LiteGraph?.vueNodesMode ||
+        typeof node.computeSize !== "function" ||
+        typeof node.setSize !== "function"
+    ) return;
+
+    const current = Array.isArray(node.size) ? node.size : [420, 300];
+    const required = node.computeSize();
+    if (!Array.isArray(required)) return;
+
+    const next = [
+        Math.max(280, Number(current[0]) || 0, Number(required[0]) || 0),
+        Math.max(Number(current[1]) || 0, Number(required[1]) || 0),
+    ];
+    if (next[0] !== current[0] || next[1] !== current[1]) {
+        node.setSize(next);
+    }
+}
+
 function refreshNode(node) {
     updateControlLayout(node);
+    // The DOM control height changes as fields are added or restored. Classic
+    // LiteGraph keeps node size separately, so grow it to the new widget layout.
+    fitClassicNode(node);
     node.setDirtyCanvas?.(true, true);
     app.graph?.setDirtyCanvas?.(true, true);
 }
