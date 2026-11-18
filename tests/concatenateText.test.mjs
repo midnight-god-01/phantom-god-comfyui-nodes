@@ -198,7 +198,7 @@ test("removes orphaned native text widgets after graph configuration", () => {
     node.onAfterGraphConfigured();
 
     assert.deepEqual(
-        node.widgets.filter((widget) => /^text_\\d+$/.test(widget.name)).map((widget) => widget.name),
+        node.widgets.filter((widget) => /^text_\d+$/.test(widget.name)).map((widget) => widget.name),
         ["text_1", "text_2"],
     );
 });
