@@ -259,11 +259,16 @@ class PhantomGodMultiLoraModelOnly:
                         "Phantom God Multi LoRA: could not apply {!r}: {}".format(name, exc)
                     ) from exc
                 try:
+                    previous_model = current_model
                     current_model, _ = comfy.sd.load_lora_for_models(
-                        current_model, None, lora, strength, 0.0
+                        previous_model, None, lora, strength, 0.0
                     )
                     if current_model is None:
                         raise RuntimeError("ComfyUI returned an empty MODEL.")
+                    if _model_patch_delta(previous_model, current_model) is False:
+                        raise RuntimeError(
+                            "The LoRA contains no weights compatible with this diffusion model."
+                        )
                     applied += 1
                 except Exception as fallback_exc:
                     raise RuntimeError(
