@@ -179,7 +179,7 @@ function renderNode(node) {
 
     const count = document.createElement("span");
     count.className = "pg-lora-count";
-    count.textContent = state.loras.length + " ACTIVE ROWS";
+    count.textContent = state.loras.length + " LORA ROWS";
     toolbar.appendChild(count);
     root.appendChild(toolbar);
 
@@ -402,6 +402,9 @@ function setupNode(node) {
 
     renderNode(node);
     fitNode(node);
+    globalThis.requestAnimationFrame?.(() => {
+        if (node.__phantomGodLoraRoot) fitNode(node);
+    });
     loadLoraNames().then(() => {
         if (node.__phantomGodLoraRoot) renderNode(node);
     }).catch((error) => showError(node, error));
