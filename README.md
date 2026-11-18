@@ -2,7 +2,7 @@
 
 A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
 
-**Current version:** 1.5.5  
+**Current version:** 1.5.6  
 **Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
@@ -92,7 +92,7 @@ Restart the ComfyUI server after updating Python code. Then refresh the browser 
 
 ## Compatibility
 
-The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. The compatibility review cross-checked current ComfyUI core and standalone frontend source on November 18, 2026, in addition to retaining the declared minimum of ComfyUI 0.45.0. The repository's CI checks mocked Python and frontend behavior; it does not perform GPU inference against an installed ComfyUI runtime. Frontend APIs can evolve independently of the core application, so behavior may vary across frontend builds.
+The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. Triton 3.9 compatibility checks include Python 3.15, matching the current stable-ABI wheel support for the PyTorch 2.15 line. The compatibility review cross-checked current ComfyUI core and standalone frontend source on November 18, 2026, in addition to retaining the declared minimum of ComfyUI 0.45.0. The repository's CI checks mocked Python and frontend behavior; it does not perform GPU inference against an installed ComfyUI runtime. Frontend APIs can evolve independently of the core application, so behavior may vary across frontend builds.
 
 The Auto Arrange Graph extension uses ComfyUI's extension registration and canvas-menu APIs. It reads graph links through the current Map-based link collection rather than patching legacy canvas prototypes.
 
