@@ -217,7 +217,7 @@ test("supports more than the previous 64 LoRA rows", async () => {
         root.children[0].children[0].click();
     }
     assert.equal(readRows(node).length, 70);
-    assert.equal(root.children[0].children[2].textContent, "70 ACTIVE ROWS");
+    assert.equal(root.children[0].children[2].textContent, "70 LORA ROWS");
 });
 
 test("LoRA responsive rows remain fluid in narrow and wide nodes", async () => {

@@ -179,7 +179,7 @@ function renderNode(node) {
 
     const count = document.createElement("span");
     count.className = "pg-lora-count";
-    count.textContent = state.loras.length + " ACTIVE ROWS";
+    count.textContent = state.loras.length + " LORA ROWS";
     toolbar.appendChild(count);
     root.appendChild(toolbar);
 
@@ -402,6 +402,9 @@ function setupNode(node) {
 
     renderNode(node);
     fitNode(node);
+    globalThis.requestAnimationFrame?.(() => {
+        if (node.__phantomGodLoraRoot) fitNode(node);
+    });
     loadLoraNames().then(() => {
         if (node.__phantomGodLoraRoot) renderNode(node);
     }).catch((error) => showError(node, error));
@@ -434,12 +437,12 @@ function findNode(index, promptId) {
 }
 
 function installPromptStateInjection() {
-    if (app.__phantomGodModelLoraPromptPatched || typeof app.graphToPrompt !== "function") return;
-    const originalGraphToPrompt = app.graphToPrompt;
-    app.graphToPrompt = async function (...args) {
-        const result = await originalGraphToPrompt.apply(this, args);
-        const output = result?.output;
-        if (!output) return result;
+    // ComfyUI has shipped multiple graphToPrompt result shapes. Inject the
+    // saved node state into the generated API prompt before it is queued.
+    if (app.__phantomGodModelLoraPromptPatched) return;
+    const inject = (result) => {
+        const output = result?.output ?? result?.prompt;
+        if (!output || typeof output !== "object") return result;
 
         let index = null;
         for (const promptId of Object.keys(output)) {
@@ -447,21 +450,41 @@ function installPromptStateInjection() {
             if (entry?.class_type !== NODE_TYPE) continue;
             index ??= buildNodeIndex();
             const node = findNode(index, promptId);
-            const state = node ? readState(node) : { loras: [] };
-            entry.inputs ??= {};
-            entry.inputs[HIDDEN_INPUT] = JSON.stringify({
+            if (!node) {
+                console.warn("[Phantom God] Could not match Multi LoRA node", promptId, "to a canvas node; preserving its generated input.");
+                continue;
+            }
+            const state = readState(node);
+            const serialized = JSON.stringify({
                 loras: state.loras.map((row) => ({
                     name: row.name,
                     on: Boolean(row.on),
                     strength: row.strength,
                 })),
             });
+            entry.inputs ??= {};
+            entry.inputs[HIDDEN_INPUT] = serialized;
         }
         return result;
     };
-    app.__phantomGodModelLoraPromptPatched = true;
-}
 
+    const patchMethod = (target, key) => {
+        if (typeof target?.[key] !== "function") return false;
+        const original = target[key];
+        target[key] = async function (...args) {
+            const result = await original.apply(this, args);
+            return inject(result);
+        };
+        return true;
+    };
+
+    // Wrap the public app method where present. Some recent frontend builds
+    // also expose graphToPrompt through the active graph object; patch that
+    // method only when the app-level method is absent to avoid double work.
+    const patched = patchMethod(app, "graphToPrompt") ||
+        patchMethod(app.graph, "graphToPrompt");
+    if (patched) app.__phantomGodModelLoraPromptPatched = true;
+}
 function patchNodeType(nodeType) {
     const prototype = nodeType?.prototype;
     if (!prototype || prototype.__phantomGodMultiLoraPatched) return;
@@ -482,10 +505,20 @@ function patchNodeType(nodeType) {
         return result;
     };
 
+    // Some supported frontends invoke onNodeCreated rather than the extension
+    // nodeCreated hook for dynamically loaded or cloned graph nodes.
+    const originalOnNodeCreated = prototype.onNodeCreated;
+    prototype.onNodeCreated = function (...args) {
+        const result = originalOnNodeCreated?.apply(this, args);
+        setupNode(this);
+        return result;
+    };
+
     const originalOnRemoved = prototype.onRemoved;
     prototype.onRemoved = function (...args) {
         this.__phantomGodLoraRoot?.remove?.();
         this.__phantomGodLoraRoot = null;
+        this.__phantomGodLoraWidget = null;
         return originalOnRemoved?.apply(this, args);
     };
 
