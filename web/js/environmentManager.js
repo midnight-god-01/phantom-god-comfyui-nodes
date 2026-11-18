@@ -288,8 +288,26 @@ async function installPackage(node, packageName) {
     }
 }
 
+function applyAdaptiveCanvasOnly(widget) {
+    if (!widget?.options) return;
+    try {
+        Object.defineProperty(widget.options, "canvasOnly", {
+            configurable: true,
+            enumerable: true,
+            get() {
+                return !window.LiteGraph?.vueNodesMode;
+            },
+        });
+    } catch {
+        // Some older frontend widget implementations expose immutable options.
+    }
+}
+
 function setupNode(node) {
-    if (node.__phantomGodEnvRoot || typeof node.addDOMWidget !== "function") return;
+    if (node.__phantomGodEnvRoot) return;
+    if (typeof node.addDOMWidget !== "function") {
+        throw new Error("This ComfyUI frontend does not provide the addDOMWidget API required by Environment Manager.");
+    }
     injectStyles();
     const root = element("div", "pg-env-root");
     node.__phantomGodEnvRoot = root;
@@ -305,13 +323,60 @@ function setupNode(node) {
     });
     widget.computeLayoutSize = () => ({ minHeight: 430, maxHeight: 900, minWidth: 390 });
     node.__phantomGodEnvWidget = widget;
+    applyAdaptiveCanvasOnly(widget);
 
     render(node);
+    globalThis.requestAnimationFrame?.(() => {
+        if (node.__phantomGodEnvRoot) {
+            updateEnvironmentLayout(node);
+            fitClassicNode(node);
+        }
+    });
+}
+
+function safeSetupNode(node) {
+    try {
+        setupNode(node);
+    } catch (error) {
+        const message = error?.message || String(error);
+        node.__phantomGodEnvError = "Environment Manager UI setup failed: " + message;
+        console.error("[Phantom God] Environment Manager could not initialize this node.", error);
+
+        if (node.__phantomGodEnvRoot && node.__phantomGodEnvWidget) {
+            try { render(node); } catch (renderError) {
+                console.error("[Phantom God] Environment Manager error panel could not render.", renderError);
+            }
+        } else if (typeof node.addWidget === "function" && !node.__phantomGodEnvFallbackWidget) {
+            try {
+                node.__phantomGodEnvFallbackWidget = node.addWidget(
+                    "text", "Environment Manager UI error", message, () => {},
+                    { serialize: false },
+                );
+                if (node.__phantomGodEnvFallbackWidget) node.__phantomGodEnvFallbackWidget.serialize = false;
+            } catch (fallbackError) {
+                console.error("[Phantom God] Environment Manager fallback widget failed.", fallbackError);
+            }
+        }
+    }
 }
 
 function patchNodeType(nodeType) {
     const prototype = nodeType?.prototype;
     if (!prototype || prototype.__phantomGodEnvPatched) return;
+    const originalCreated = prototype.onNodeCreated;
+    prototype.onNodeCreated = function (...args) {
+        const result = originalCreated?.apply(this, args);
+        safeSetupNode(this);
+        return result;
+    };
+
+    const originalAdded = prototype.onAdded;
+    prototype.onAdded = function (...args) {
+        const result = originalAdded?.apply(this, args);
+        safeSetupNode(this);
+        return result;
+    };
+
     const originalRemoved = prototype.onRemoved;
     prototype.onRemoved = function (...args) {
         this.__phantomGodEnvRemoved = true;
@@ -328,7 +393,7 @@ app.registerExtension({
         if (nodeData?.name === NODE_TYPE) patchNodeType(nodeType);
     },
     nodeCreated(node) {
-        if (node?.type === NODE_TYPE || node?.comfyClass === NODE_TYPE) setupNode(node);
+        if (node?.type === NODE_TYPE || node?.comfyClass === NODE_TYPE) safeSetupNode(node);
     },
 });
 
