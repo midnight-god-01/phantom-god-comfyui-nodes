@@ -141,7 +141,7 @@ test("does not scan the environment when the node is created", async () => {
     await flushPromises();
     assert.equal(requests.check, 0);
     assert.equal(node.__phantomGodEnvReport, undefined);
-    assert.match(node.__phantomGodEnvRoot.children[1].textContent, /Select Check Environment/);
+    assert.match(node.__phantomGodEnvRoot.children[1].children[1].textContent, /Select Check Environment/);
 });
 
 test("runs an environment scan only after an explicit Check All action", async () => {
