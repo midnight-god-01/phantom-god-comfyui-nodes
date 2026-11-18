@@ -37,7 +37,7 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
 
     def test_triton_rejects_python_above_official_wheel_range(self):
         env = {
-            "torch": "2.13.1+cu130", "python": "3.14.0",
+            "torch": "2.13.1+cu130", "python": "3.15.0",
             "system": "Linux", "machine": "x86_64",
             "cuda_available": True, "cuda": "13.0", "capability": [8, 6],
         }
@@ -47,7 +47,7 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
             report = _triton_report(env)
         self.assertFalse(report["supported"])
         self.assertEqual(report["status"], "Unsupported Python")
-        self.assertIn("through 3.13", report["message"])
+        self.assertIn("through 3.14", report["message"])
 
     def test_triton_rejects_python_below_supported_minimum(self):
         env = {
@@ -74,7 +74,7 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
             report = _triton_report(env)
         self.assertTrue(report["supported"])
         self.assertEqual(report["status"], "Package conflict")
-        self.assertIn("legacy 'triton' 3.2.0", report["message"])
+        self.assertIn("Legacy 'triton' 3.2.0", report["message"])
         self.assertIn("Current triton-windows state: Update available", report["message"])
 
     def test_windows_sageattention_is_blocked_by_legacy_triton_conflict(self):
