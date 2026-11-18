@@ -22,7 +22,7 @@ Find the node under **Phantom God / Text**.
 
 - Starts with two optional multiline text fields.
 - Use **Add Text** to create additional fields. Each field has a matching STRING input socket.
-- Every field has an individual remove control, including the first two default fields.
+- Every field has an individual remove control, including the first two default fields. Orphaned widgets are reconciled after ComfyUI restores graph inputs.
 - All text fields are optional, so the node remains valid when every field is removed.
 - Choose any delimiter, including spaces, commas, pipes, or newline characters. The default delimiter is one space.
 - Values are joined in numeric field order: Text 1, Text 2, Text 3, and so on.
@@ -64,6 +64,12 @@ Find the node under **Phantom God / System**. It inspects the active ComfyUI Pyt
 - Requires a restart of ComfyUI after a successful installation before testing the package.
 
 The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels currently target compute capabilities 8.0, 8.6, 8.9, 9.0, 10.0, 12.0, and 12.1. CUDA minimums are architecture-specific: 12.0 for Ampere, 12.4 for Ada, 12.3 for Hopper, and 12.8 for Blackwell. If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build. Environment Manager is a manual utility; it is not an automatic workflow output. It does not scan when the node is created; checks run only after selecting Check All or a package-specific Check button.
+
+## Updating and loading node changes
+
+After updating this custom-node folder, fully restart the ComfyUI Python process. A browser refresh alone cannot register new Python node classes. Then hard-refresh the browser page (Ctrl+Shift+R) so ComfyUI reloads the JavaScript extensions.
+
+On startup, this pack prints the registered node type names to the ComfyUI console. Confirm that `PhantomGodMultiLoraModelOnly` appears there before searching for **Multi LoRA Loader (Model Only)** in the node picker.
 
 ## Installation
 

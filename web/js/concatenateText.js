@@ -109,6 +109,27 @@ function ensureTextField(node, index, defaultValue = "") {
     return widget;
 }
 
+function pruneOrphanTextWidgets(node) {
+    const validNames = new Set(
+        (node.inputs ?? []).map((input) => input?.name).filter(isTextInputName),
+    );
+    for (const widget of [...(node.widgets ?? [])]) {
+        if (isTextInputName(widget?.name) && !validNames.has(widget.name)) {
+            widget.onRemove?.();
+            widget.element?.remove?.();
+            const index = node.widgets?.indexOf(widget) ?? -1;
+            if (index >= 0) node.widgets.splice(index, 1);
+        }
+    }
+}
+
+function reconcileAfterGraphConfigured(node) {
+    pruneOrphanTextWidgets(node);
+    applyHiddenStates(node);
+    renderTextControls(node);
+    refreshNode(node);
+}
+
 function removeWidget(node, name) {
     const widgets = node.widgets ?? [];
     const index = widgets.findIndex((widget) => widget.name === name);
@@ -396,6 +417,13 @@ function patchNodeType(nodeType) {
         applyHiddenStates(this);
         renderTextControls(this);
         refreshNode(this);
+        return result;
+    };
+
+    const originalOnAfterGraphConfigured = prototype.onAfterGraphConfigured;
+    prototype.onAfterGraphConfigured = function (...args) {
+        const result = originalOnAfterGraphConfigured?.apply(this, args);
+        reconcileAfterGraphConfigured(this);
         return result;
     };
 
