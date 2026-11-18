@@ -478,11 +478,12 @@ function installPromptStateInjection() {
         return true;
     };
 
-    // The current frontend calls app.graphToPrompt(); leave the lower-level
-    // graph implementation untouched to avoid altering unrelated prompt paths.
-    if (patchMethod(app, "graphToPrompt")) {
-        app.__phantomGodModelLoraPromptPatched = true;
-    }
+    // Wrap the public app method where present. Some recent frontend builds
+    // also expose graphToPrompt through the active graph object; patch that
+    // method only when the app-level method is absent to avoid double work.
+    const patched = patchMethod(app, "graphToPrompt") ||
+        patchMethod(app.graph, "graphToPrompt");
+    if (patched) app.__phantomGodModelLoraPromptPatched = true;
 }
 function patchNodeType(nodeType) {
     const prototype = nodeType?.prototype;
