@@ -3,7 +3,7 @@
 ## 1.5.6 — 2026-11-18
 
 - Extend the PyTorch 2.15 / Triton 3.9 compatibility range through Python 3.15 on Windows and Linux, matching current stable-ABI wheel support.
-- Add platform-specific regression tests for Python 3.15 Triton selection.
+- Add platform-specific regression tests for Python 3.15 Triton selection.\n- Run native Triton and SageAttention import checks in isolated child interpreters so DLLs are not left loaded in the ComfyUI process during package replacement.
 
 ## 1.5.5 — 2026-11-18
 
