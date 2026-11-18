@@ -286,9 +286,9 @@ def _safe_import_status(module_name):
     the long-running ComfyUI process or reusing stale sys.modules entries.
     """
     script = (
-        "import importlib, json, sys\\n"
-        "module = importlib.import_module(sys.argv[1])\\n"
-        "print(json.dumps(getattr(module, '__version__', None)))\\n"
+        "import importlib, json, sys; "
+        "module = importlib.import_module(sys.argv[1]); "
+        "print(json.dumps(getattr(module, '__version__', None)))"
     )
     try:
         result = subprocess.run(
