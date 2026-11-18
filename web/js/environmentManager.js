@@ -309,9 +309,49 @@ function setupNode(node) {
     render(node);
 }
 
+function safeSetupNode(node) {
+    try {
+        setupNode(node);
+    } catch (error) {
+        const message = error?.message || String(error);
+        node.__phantomGodEnvError = "Environment Manager UI setup failed: " + message;
+        console.error("[Phantom God] Environment Manager could not initialize this node.", error);
+
+        if (node.__phantomGodEnvRoot && node.__phantomGodEnvWidget) {
+            try { render(node); } catch (renderError) {
+                console.error("[Phantom God] Environment Manager error panel could not render.", renderError);
+            }
+        } else if (typeof node.addWidget === "function" && !node.__phantomGodEnvFallbackWidget) {
+            try {
+                node.__phantomGodEnvFallbackWidget = node.addWidget(
+                    "text", "Environment Manager UI error", message, () => {},
+                    { serialize: false },
+                );
+                if (node.__phantomGodEnvFallbackWidget) node.__phantomGodEnvFallbackWidget.serialize = false;
+            } catch (fallbackError) {
+                console.error("[Phantom God] Environment Manager fallback widget failed.", fallbackError);
+            }
+        }
+    }
+}
+
 function patchNodeType(nodeType) {
     const prototype = nodeType?.prototype;
     if (!prototype || prototype.__phantomGodEnvPatched) return;
+    const originalCreated = prototype.onNodeCreated;
+    prototype.onNodeCreated = function (...args) {
+        const result = originalCreated?.apply(this, args);
+        safeSetupNode(this);
+        return result;
+    };
+
+    const originalAdded = prototype.onAdded;
+    prototype.onAdded = function (...args) {
+        const result = originalAdded?.apply(this, args);
+        safeSetupNode(this);
+        return result;
+    };
+
     const originalRemoved = prototype.onRemoved;
     prototype.onRemoved = function (...args) {
         this.__phantomGodEnvRemoved = true;
@@ -328,7 +368,7 @@ app.registerExtension({
         if (nodeData?.name === NODE_TYPE) patchNodeType(nodeType);
     },
     nodeCreated(node) {
-        if (node?.type === NODE_TYPE || node?.comfyClass === NODE_TYPE) setupNode(node);
+        if (node?.type === NODE_TYPE || node?.comfyClass === NODE_TYPE) safeSetupNode(node);
     },
 });
 
