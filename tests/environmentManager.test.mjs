@@ -52,9 +52,11 @@ function loadExtension(report) {
     const extensions = [];
     const document = makeDocument();
     const app = { graph: { setDirtyCanvas() {} }, registerExtension(ext) { extensions.push(ext); } };
+    const requests = { check: 0 };
     const api = {
         async fetchApi(route) {
             assert.equal(route, "/phantom_god/environment/check");
+            requests.check += 1;
             return { ok: true, async json() { return report; } };
         },
     };
@@ -63,7 +65,7 @@ function loadExtension(report) {
         window: { LiteGraph: { vueNodesMode: true } },
         console: { info() {}, warn() {}, error() {} },
     });
-    return { extension: extensions[0], document };
+    return { extension: extensions[0], document, requests };
 }
 
 function makeReport() {
@@ -106,7 +108,7 @@ async function flushPromises() {
 }
 
 function setup() {
-    const { extension, document } = loadExtension(makeReport());
+    const { extension, document, requests } = loadExtension(makeReport());
     class Node {
         onRemoved() {}
     }
@@ -125,7 +127,7 @@ function setup() {
         setDirtyCanvas() {},
     });
     extension.nodeCreated(node);
-    return { extension, document, node };
+    return { extension, document, node, requests };
 }
 
 test("registers the Environment Manager frontend extension", () => {
@@ -133,8 +135,26 @@ test("registers the Environment Manager frontend extension", () => {
     assert.equal(extension.name, "PhantomGod.EnvironmentManager");
 });
 
+
+test("does not scan the environment when the node is created", async () => {
+    const { node, requests } = setup();
+    await flushPromises();
+    assert.equal(requests.check, 0);
+    assert.equal(node.__phantomGodEnvReport, undefined);
+    assert.match(node.__phantomGodEnvRoot.children[1].textContent, /Select Check Environment/);
+});
+
+test("runs an environment scan only after an explicit Check All action", async () => {
+    const { node, requests } = setup();
+    node.__phantomGodEnvRoot.children[0].children[1].click();
+    await flushPromises();
+    assert.equal(requests.check, 1);
+    assert.ok(node.__phantomGodEnvReport);
+});
+
 test("disables SageAttention installation when Triton prerequisite is missing", async () => {
     const { node } = setup();
+    node.__phantomGodEnvRoot.children[0].children[1].click();
     await flushPromises();
 
     const root = node.__phantomGodEnvRoot;
