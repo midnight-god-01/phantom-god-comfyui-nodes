@@ -49,6 +49,44 @@ class EnvironmentManagerCompatibilityTests(unittest.TestCase):
         self.assertEqual(report["status"], "Unsupported Python")
         self.assertIn("through 3.14", report["message"])
 
+    def test_triton_39_accepts_python_315_on_linux(self):
+        env = {
+            "torch": "2.15.0+cu130", "python": "3.15.0",
+            "system": "Linux", "machine": "x86_64",
+            "cuda_available": True, "cuda": "13.0", "capability": [8, 6],
+        }
+        with patch(
+            "features.environment_manager._latest_pypi_version",
+            return_value="3.9.0",
+        ), patch(
+            "features.environment_manager._distribution_version",
+            return_value=None,
+        ):
+            report = _triton_report(env)
+
+        self.assertTrue(report["supported"])
+        self.assertEqual(report["status"], "Not installed")
+        self.assertEqual(report["target_minor"], 9)
+
+    def test_triton_windows_39_accepts_python_315_abi3_wheel(self):
+        env = {
+            "torch": "2.15.0+cu130", "python": "3.15.0",
+            "system": "Windows", "machine": "AMD64",
+            "cuda_available": True, "cuda": "13.0", "capability": [8, 6],
+        }
+        with patch(
+            "features.environment_manager._latest_pypi_version",
+            return_value="3.9.0.post30",
+        ), patch(
+            "features.environment_manager._distribution_version",
+            return_value=None,
+        ):
+            report = _triton_report(env)
+
+        self.assertTrue(report["supported"])
+        self.assertEqual(report["status"], "Not installed")
+        self.assertEqual(report["target_minor"], 9)
+
     def test_triton_rejects_python_below_supported_minimum(self):
         env = {
             "torch": "2.10.1+cu128", "python": "3.8.18",
