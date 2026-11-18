@@ -52,16 +52,15 @@ function loadExtension() {
     const document = makeDocument();
     const app = {
         graph: { _nodes: [], setDirtyCanvas() {} },
-        async graphToPrompt() {
-            return {
-                output: {
-                    "1": {
-                        class_type: "PhantomGodConcatenateText",
-                        inputs: { text_1: "first", text_2: "second" },
-                    },
+        __promptResult: {
+            output: {
+                "1": {
+                    class_type: "PhantomGodConcatenateText",
+                    inputs: { text_1: "first", text_2: "second" },
                 },
-            };
+            },
         },
+        async graphToPrompt() { return this.__promptResult; },
         registerExtension(extension) { extensions.push(extension); },
     };
     const ComfyWidgets = {
@@ -217,8 +216,7 @@ test("restores old positional workflow values for non-contiguous fields", () => 
 
 
 test("prompt injection follows each repeated nested subgraph execution path", async () => {
-    const { app } = loadExtension();
-    const { node: innerNode } = setupNode();
+    const { node: innerNode, app } = setupNode();
     innerNode.id = 5;
     innerNode.properties.phantomGodTextRemoveState = { "1": true };
 
@@ -226,7 +224,7 @@ test("prompt injection follows each repeated nested subgraph execution path", as
     const firstInstance = { id: 10, subgraph: sharedDefinition };
     const secondInstance = { id: 11, subgraph: sharedDefinition };
     app.graph = { _nodes: [firstInstance, secondInstance] };
-    app.graphToPrompt = async () => ({
+    app.__promptResult = {
         output: {
             "10:5": {
                 class_type: "PhantomGodConcatenateText",
@@ -237,7 +235,7 @@ test("prompt injection follows each repeated nested subgraph execution path", as
                 inputs: { text_1: "native-b" },
             },
         },
-    });
+    };
 
     const prompt = await app.graphToPrompt();
     assert.equal(prompt.output["10:5"].inputs.text_1, "");
@@ -247,14 +245,14 @@ test("prompt injection follows each repeated nested subgraph execution path", as
 test("prompt injection does not apply root node state to an unmatched nested ID", async () => {
     const { node, app } = setupNode();
     node.properties.phantomGodTextRemoveState = { "1": true };
-    app.graphToPrompt = async () => ({
+    app.__promptResult = {
         output: {
             "999:1": {
                 class_type: "PhantomGodConcatenateText",
                 inputs: { text_1: "preserve-this" },
             },
         },
-    });
+    };
 
     const prompt = await app.graphToPrompt();
     assert.equal(prompt.output["999:1"].inputs.text_1, "preserve-this");
