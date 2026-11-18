@@ -3,7 +3,7 @@
 ## 1.5.6 — 2026-11-18
 
 - Reconcile Concatenate Text native widgets after ComfyUI finishes graph configuration, removing orphaned text fields from restored or edited workflows.
-- Add node-added lifecycle fallbacks and visible error reporting for Multi LoRA and Environment Manager frontend initialization.
+- Add node-added lifecycle fallbacks and visible error reporting for Multi LoRA and Environment Manager frontend initialization, including a clear fallback when `addDOMWidget` is unavailable.
 - Add registry checks to ensure all three workflow nodes, including the model-only LoRA node, are exported.
 
 - Extend the PyTorch 2.15 / Triton 3.9 compatibility range through Python 3.15 on Windows and Linux, matching current stable-ABI wheel support.
