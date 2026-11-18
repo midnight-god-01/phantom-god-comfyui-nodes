@@ -470,34 +470,6 @@ def _triton_report(env):
     return result
 
 
-    try:
-        latest = _latest_pypi_version(target["package"], target["minor"])
-        result["latest"] = latest
-    except Exception as exc:
-        result["latest_error"] = str(exc)[:250]
-    if installed:
-        installed_pair = _parse_version_pair(installed)
-        if installed_pair != (3, target["minor"]):
-            result.update(status="Update required", message="Installed Triton {} does not match PyTorch's compatible 3.{} line."
-                          .format(installed, target["minor"]))
-        elif result["latest"] and _version_sort_key(installed) < _version_sort_key(result["latest"]):
-            result.update(status="Update available", message="Triton {} is installed; {} is the latest published build in the compatible 3.{} line."
-                          .format(installed, result["latest"], target["minor"]))
-        elif not result["latest"]:
-            result.update(status="Compatible", message="Installed Triton matches PyTorch's compatible 3.{} line; latest patch could not be confirmed online."
-                          .format(target["minor"]))
-        else:
-            result.update(status="Up to date", message="Installed Triton matches the latest published build in the compatible 3.{} line."
-                          .format(target["minor"]))
-    else:
-        result.update(status="Not installed", message="Compatible Triton 3.{} is available for this PyTorch environment."
-                      .format(target["minor"]))
-    result["import_ok"], result["import_detail"] = _safe_import_status("triton") if installed else (False, None)
-    if installed and not result["import_ok"]:
-        result["status"] = "Import failed"
-        result["message"] = "Triton is installed but cannot be imported: {}".format(result["import_detail"])
-    return result
-
 
 def _sage_report(env):
     installed = _distribution_version("sageattention")
