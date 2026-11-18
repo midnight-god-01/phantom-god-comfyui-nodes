@@ -286,7 +286,6 @@ function setupNode(node) {
         node.size = [430, Math.max(node.size?.[1] || 0, 440)];
     }
     render(node);
-    checkEnvironment(node);
 }
 
 function patchNodeType(nodeType) {
