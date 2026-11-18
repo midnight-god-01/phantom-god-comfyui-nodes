@@ -33,7 +33,8 @@ TRITON_PYTHON_BOUNDS = {
     6: ((3, 10), (3, 14)),
     7: ((3, 10), (3, 14)),
     8: ((3, 10), (3, 14)),
-    9: ((3, 10), (3, 14)),
+    # Triton 3.9 uses cp312-abi3 wheels, compatible through Python 3.15.
+    9: ((3, 11), (3, 15)),
 }
 SAGE_SUPPORTED_COMPUTE_CAPABILITIES = {
     (8, 0), (8, 6), (8, 9), (9, 0), (10, 0), (12, 0), (12, 1),
