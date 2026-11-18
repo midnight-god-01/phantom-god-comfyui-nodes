@@ -149,6 +149,30 @@ function readRows(node) {
     return JSON.parse(node.properties.phantomGodModelLoraState || '{"loras":[]}').loras;
 }
 
+test("shows a visible error widget when addDOMWidget is unavailable", () => {
+    const { extension } = loadExtension();
+    class Node {
+        onNodeCreated() {}
+        onAdded() {}
+        onRemoved() {}
+    }
+    extension.beforeRegisterNodeDef(Node, { name: "PhantomGodMultiLoraModelOnly" });
+    const node = new Node();
+    node.type = "PhantomGodMultiLoraModelOnly";
+    node.properties = {};
+    node.widgets = [];
+    node.addWidget = (...args) => {
+        node.fallbackArgs = args;
+        return { name: args[1] };
+    };
+
+    node.onAdded();
+
+    assert.ok(node.__phantomGodLoraFallbackWidget);
+    assert.equal(node.fallbackArgs[1], "Multi LoRA UI error");
+    assert.match(node.fallbackArgs[2], /addDOMWidget API/);
+});
+
 test("initializes Multi LoRA from the node-added fallback", async () => {
     const { extension } = loadExtension();
     class Node {
