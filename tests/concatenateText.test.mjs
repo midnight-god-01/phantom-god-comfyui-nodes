@@ -75,7 +75,7 @@ function loadExtension() {
     runInNewContext(script, {
         app, ComfyWidgets, document,
         window: { LiteGraph: { vueNodesMode: false } },
-        console: { info() {}, error() {} },
+        console: { info() {}, warn() {}, error() {} },
     });
     return { extension: extensions[0], document, app };
 }
