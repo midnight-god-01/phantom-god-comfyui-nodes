@@ -377,8 +377,11 @@ function hideStateWidget(node) {
 }
 
 function setupNode(node) {
+    if (node.__phantomGodLoraRoot) return;
+    if (typeof node.addDOMWidget !== "function") {
+        throw new Error("This ComfyUI frontend does not provide the addDOMWidget API required by Multi LoRA.");
+    }
     hideStateWidget(node);
-    if (node.__phantomGodLoraRoot || typeof node.addDOMWidget !== "function") return;
     injectStyles();
     const root = document.createElement("div");
     root.className = "pg-lora-root";
@@ -488,6 +491,28 @@ function installPromptStateInjection() {
         patchMethod(app.graph, "graphToPrompt");
     if (patched) app.__phantomGodModelLoraPromptPatched = true;
 }
+function safeSetupNode(node) {
+    try {
+        setupNode(node);
+    } catch (error) {
+        const message = error?.message || String(error);
+        console.error("[Phantom God] Multi LoRA node UI initialization failed.", error);
+        if (node.__phantomGodLoraRoot && node.__phantomGodLoraWidget) {
+            showError(node, error);
+        } else if (typeof node.addWidget === "function" && !node.__phantomGodLoraFallbackWidget) {
+            try {
+                node.__phantomGodLoraFallbackWidget = node.addWidget(
+                    "text", "Multi LoRA UI error", message, () => {},
+                    { serialize: false },
+                );
+                if (node.__phantomGodLoraFallbackWidget) node.__phantomGodLoraFallbackWidget.serialize = false;
+            } catch (fallbackError) {
+                console.error("[Phantom God] Multi LoRA fallback widget failed.", fallbackError);
+            }
+        }
+    }
+}
+
 function patchNodeType(nodeType) {
     const prototype = nodeType?.prototype;
     if (!prototype || prototype.__phantomGodMultiLoraPatched) return;
@@ -513,7 +538,21 @@ function patchNodeType(nodeType) {
     const originalOnNodeCreated = prototype.onNodeCreated;
     prototype.onNodeCreated = function (...args) {
         const result = originalOnNodeCreated?.apply(this, args);
-        setupNode(this);
+        safeSetupNode(this);
+        return result;
+    };
+
+    const originalOnAdded = prototype.onAdded;
+    prototype.onAdded = function (...args) {
+        const result = originalOnAdded?.apply(this, args);
+        safeSetupNode(this);
+        return result;
+    };
+
+    const originalOnAfterGraphConfigured = prototype.onAfterGraphConfigured;
+    prototype.onAfterGraphConfigured = function (...args) {
+        const result = originalOnAfterGraphConfigured?.apply(this, args);
+        safeSetupNode(this);
         return result;
     };
 
@@ -539,7 +578,7 @@ app.registerExtension({
 
     nodeCreated(node) {
         if (node?.type === NODE_TYPE || node?.comfyClass === NODE_TYPE) {
-            setupNode(node);
+            safeSetupNode(node);
         }
     },
 });
