@@ -2,6 +2,10 @@
 
 ## 1.5.6 — 2026-11-18
 
+- Reconcile Concatenate Text native widgets after ComfyUI finishes graph configuration, removing orphaned text fields from restored or edited workflows.
+- Add node-added lifecycle fallbacks and visible error reporting for Multi LoRA and Environment Manager frontend initialization.
+- Add registry checks to ensure all three workflow nodes, including the model-only LoRA node, are exported.
+
 - Extend the PyTorch 2.15 / Triton 3.9 compatibility range through Python 3.15 on Windows and Linux, matching current stable-ABI wheel support.
 - Add platform-specific regression tests for Python 3.15 Triton selection.\n- Run native Triton and SageAttention import checks in isolated child interpreters so DLLs are not left loaded in the ComfyUI process during package replacement.
 
