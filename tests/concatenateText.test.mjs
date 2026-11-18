@@ -160,6 +160,29 @@ test("Add Text creates a field and each field has an individual toggle", () => {
     assert.equal(node.properties.phantomGodTextRemoveState["3"], undefined);
 });
 
+
+test("Classic LiteGraph expands Concatenate Text as field controls grow", () => {
+    const { node } = setupNode();
+    node.size = [420, 180];
+    node.sizeCalls = 0;
+    node.computeSize = () => [
+        420,
+        200 + node.__phantomGodTextControls.computeLayoutSize().minHeight,
+    ];
+    node.setSize = (size) => {
+        node.size = [...size];
+        node.sizeCalls += 1;
+    };
+
+    const addButton = node.__phantomGodTextControlRoot.children[2].children[0];
+    addButton.click();
+    addButton.click();
+
+    const requiredHeight = node.computeSize()[1];
+    assert.ok(node.size[1] >= requiredHeight);
+    assert.ok(node.sizeCalls > 0);
+});
+
 test("OFF toggles exclude text fields from workflow execution", async () => {
     const { node, app } = setupNode();
     const firstRow = node.__phantomGodTextControlRoot.children[1].children[0];
