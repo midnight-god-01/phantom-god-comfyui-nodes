@@ -84,16 +84,15 @@ function loadExtension() {
     const document = makeDocument();
     const app = {
         graph: null,
-        async graphToPrompt() {
-            return {
-                output: {
-                    "1": {
-                        class_type: "PhantomGodMultiLoraModelOnly",
-                        inputs: { model: ["base", 0] },
-                    },
+        __promptResult: {
+            output: {
+                "1": {
+                    class_type: "PhantomGodMultiLoraModelOnly",
+                    inputs: { model: ["base", 0] },
                 },
-            };
+            },
         },
+        async graphToPrompt() { return this.__promptResult; },
         registerExtension(extension) { extensions.push(extension); },
     };
     const api = {
@@ -284,7 +283,7 @@ test("prompt injection resolves repeated nested subgraph instances independently
     const firstInstance = { id: 10, subgraph: sharedDefinition };
     const secondInstance = { id: 11, subgraph: sharedDefinition };
     app.graph = { _nodes: [firstInstance, secondInstance] };
-    app.graphToPrompt = async () => ({
+    app.__promptResult = {
         output: {
             "10:5": {
                 class_type: "PhantomGodMultiLoraModelOnly",
@@ -295,7 +294,7 @@ test("prompt injection resolves repeated nested subgraph instances independently
                 inputs: { model: ["base", 0] },
             },
         },
-    });
+    };
 
     const prompt = await app.graphToPrompt();
     for (const id of ["10:5", "11:5"]) {
@@ -310,14 +309,14 @@ test("prompt injection preserves state for unmatched nested execution IDs", asyn
     const { app } = loadExtension();
     const node = makeNode();
     app.graph = { _nodes: [node] };
-    app.graphToPrompt = async () => ({
+    app.__promptResult = {
         output: {
             "999:1": {
                 class_type: "PhantomGodMultiLoraModelOnly",
                 inputs: { model: ["base", 0], LoraStackState: "existing-state" },
             },
         },
-    });
+    };
 
     const prompt = await app.graphToPrompt();
     assert.equal(prompt.output["999:1"].inputs.LoraStackState, "existing-state");
