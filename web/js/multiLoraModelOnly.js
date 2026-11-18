@@ -377,8 +377,11 @@ function hideStateWidget(node) {
 }
 
 function setupNode(node) {
+    if (node.__phantomGodLoraRoot) return;
+    if (typeof node.addDOMWidget !== "function") {
+        throw new Error("This ComfyUI frontend does not provide the addDOMWidget API required by Multi LoRA.");
+    }
     hideStateWidget(node);
-    if (node.__phantomGodLoraRoot || typeof node.addDOMWidget !== "function") return;
     injectStyles();
     const root = document.createElement("div");
     root.className = "pg-lora-root";
