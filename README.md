@@ -22,7 +22,7 @@ Find the node under **Phantom God / Text**.
 
 - Starts with two optional multiline text fields.
 - Use **Add Text** to create additional fields. Each field has a matching STRING input socket.
-- Every field has an individual remove control, including the first two default fields.
+- Every field has an individual remove control, including the first two default fields. Orphaned widgets are reconciled after ComfyUI restores graph inputs.
 - All text fields are optional, so the node remains valid when every field is removed.
 - Choose any delimiter, including spaces, commas, pipes, or newline characters. The default delimiter is one space.
 - Values are joined in numeric field order: Text 1, Text 2, Text 3, and so on.
