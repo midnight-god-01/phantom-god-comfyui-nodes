@@ -170,7 +170,12 @@ class PhantomGodMultiLoraModelOnly:
         self._cached_metadata = metadata
         return lora, metadata
 
-    def apply(self, model, LoraStackState="{}"):
+    def apply(self, model, LoraStackState="{}", **kwargs):
+        # ComfyUI hidden STRING inputs are injected into the execution prompt
+        # by the frontend. Accept historical casing/extra hidden arguments
+        # without allowing a stale default to silently erase the stack.
+        if LoraStackState in (None, ""):
+            LoraStackState = kwargs.get("lora_stack_state", "{}")
         if model is None:
             raise ValueError("Connect a MODEL input before applying LoRAs.")
 
