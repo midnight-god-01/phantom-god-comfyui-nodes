@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -8,6 +10,7 @@ from features.environment_manager import (
     _select_sage_wheel,
     _triton_target,
     _triton_report,
+    _safe_import_status,
     PhantomGodEnvironmentManager,
     _version_sort_key,
 )
@@ -15,10 +18,8 @@ from features.environment_manager import (
 
 class IsolatedImportCheckTests(unittest.TestCase):
     def test_import_check_runs_in_a_child_interpreter(self):
-        completed = types.SimpleNamespace(
-            returncode=0,
-            stdout='"3.9.0"\\n',
-            stderr="",
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout='"3.9.0"', stderr=""
         )
         with patch(
             "features.environment_manager.subprocess.run",
@@ -32,18 +33,17 @@ class IsolatedImportCheckTests(unittest.TestCase):
         self.assertTrue(imported)
         self.assertEqual(version, "3.9.0")
         args, kwargs = run.call_args
-        self.assertEqual(args[0][0], __import__("sys").executable)
-        self.assertEqual(args[0][1:3], ["-c", args[0][2]])
+        self.assertEqual(args[0][0], sys.executable)
+        self.assertEqual(args[0][1], "-c")
+        self.assertIn("importlib.import_module", args[0][2])
         self.assertEqual(args[0][-1], "triton")
         self.assertTrue(kwargs["capture_output"])
         self.assertTrue(kwargs["text"])
         self.assertEqual(kwargs["timeout"], 30)
 
     def test_import_check_reports_child_process_errors(self):
-        completed = types.SimpleNamespace(
-            returncode=1,
-            stdout="",
-            stderr="ImportError: missing native runtime",
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="ImportError: missing native runtime"
         )
         with patch(
             "features.environment_manager.subprocess.run",
@@ -57,7 +57,7 @@ class IsolatedImportCheckTests(unittest.TestCase):
     def test_import_check_reports_timeout(self):
         with patch(
             "features.environment_manager.subprocess.run",
-            side_effect=__import__("subprocess").TimeoutExpired("python", 30),
+            side_effect=subprocess.TimeoutExpired(sys.executable, 30),
         ):
             imported, detail = _safe_import_status("triton")
 
