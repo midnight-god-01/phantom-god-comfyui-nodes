@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.5 — 2026-11-18
+
+- Cross-checked every feature against current ComfyUI core and frontend source.
+- Detect enabled LoRAs that add no compatible diffusion-model patches, rather than silently passing through an unchanged model.
+- Narrowed LoRA loader compatibility fallbacks so deserialization and patching TypeErrors are not hidden.
+- Fixed nested-subgraph prompt-state lookup to use full execution paths, including repeated subgraph instances; unmatched paths preserve generated inputs.
+- Made Environment Manager checks strictly user-initiated instead of scanning when the node is created.
+- Added Triton Python-wheel version bounds and retained Windows legacy Triton conflict status; SageAttention is blocked until the conflict is resolved.
+- Added regression tests for LoRA weight matching, nested subgraph injection, manual environment scans, Triton compatibility, and installer conflicts.
+
+
 ## 1.5.4 — 2026-11-18
 
 - Reworked Multi LoRA content sizing to measure live DOM children and recalculate the Nodes 2.0 layout height on demand.
