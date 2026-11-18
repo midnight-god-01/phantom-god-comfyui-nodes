@@ -289,7 +289,10 @@ async function installPackage(node, packageName) {
 }
 
 function setupNode(node) {
-    if (node.__phantomGodEnvRoot || typeof node.addDOMWidget !== "function") return;
+    if (node.__phantomGodEnvRoot) return;
+    if (typeof node.addDOMWidget !== "function") {
+        throw new Error("This ComfyUI frontend does not provide the addDOMWidget API required by Environment Manager.");
+    }
     injectStyles();
     const root = element("div", "pg-env-root");
     node.__phantomGodEnvRoot = root;
