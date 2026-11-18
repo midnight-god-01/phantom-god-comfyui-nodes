@@ -434,9 +434,8 @@ function findNode(index, promptId) {
 }
 
 function installPromptStateInjection() {
-    // ComfyUI has shipped multiple graphToPrompt shapes over time. Inject
-    // state into the generated API prompt and also into the workflow's hidden
-    // widget value as a fallback for frontends that build prompts separately.
+    // ComfyUI has shipped multiple graphToPrompt result shapes. Inject the
+    // saved node state into the generated API prompt before it is queued.
     if (app.__phantomGodModelLoraPromptPatched) return;
     const inject = (result) => {
         const output = result?.output ?? result?.prompt;
@@ -448,7 +447,10 @@ function installPromptStateInjection() {
             if (entry?.class_type !== NODE_TYPE) continue;
             index ??= buildNodeIndex();
             const node = findNode(index, promptId);
-            if (!node) continue;
+            if (!node) {
+                console.warn("[Phantom God] Could not match Multi LoRA node", promptId, "to a canvas node; preserving its generated input.");
+                continue;
+            }
             const state = readState(node);
             const serialized = JSON.stringify({
                 loras: state.loras.map((row) => ({
@@ -499,10 +501,20 @@ function patchNodeType(nodeType) {
         return result;
     };
 
+    // Some supported frontends invoke onNodeCreated rather than the extension
+    // nodeCreated hook for dynamically loaded or cloned graph nodes.
+    const originalOnNodeCreated = prototype.onNodeCreated;
+    prototype.onNodeCreated = function (...args) {
+        const result = originalOnNodeCreated?.apply(this, args);
+        setupNode(this);
+        return result;
+    };
+
     const originalOnRemoved = prototype.onRemoved;
     prototype.onRemoved = function (...args) {
         this.__phantomGodLoraRoot?.remove?.();
         this.__phantomGodLoraRoot = null;
+        this.__phantomGodLoraWidget = null;
         return originalOnRemoved?.apply(this, args);
     };
 
