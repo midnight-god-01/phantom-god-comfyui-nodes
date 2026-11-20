@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.9 — 2026-11-20
+
+- Re-check current ComfyUI core and frontend sources and correct the compatibility notes: ComfyUI v0.46.0 released with frontend package 1.59.6, while current ComfyUI master pins 1.59.10.
+- Confirm the active canvas graph, canvas-menu extension hook, execution-order calculation, graph link Map, node positioning, and canvas invalidation APIs remain available.
+- Align package and extension version metadata at 1.5.9.
+
+
 ## 1.5.8 — 2026-11-20
 
 - Audit Auto Arrange Graph against ComfyUI 0.46.0, bundled frontend 1.59.6, and standalone frontend 1.61.4.

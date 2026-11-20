@@ -2,7 +2,7 @@
 
 A lightweight ComfyUI custom-node package containing a graph-canvas arrangement extension.
 
-**Current version:** 1.5.8  
+**Current version:** 1.5.9  
 **Minimum requirements:** ComfyUI 0.46.0 or newer; Python 3.10 or newer
 
 ## Features
@@ -45,7 +45,7 @@ Restart the ComfyUI server after updating. Then refresh the browser interface so
 
 ## Compatibility
 
-The package targets ComfyUI 0.46.0 or newer and Python 3.10 or newer, matching the current ComfyUI core requirements. The extension was audited against ComfyUI 0.46.0 with its bundled frontend package 1.59.6 and the standalone ComfyUI frontend 1.61.4 (November 20, 2026). Auto Arrange Graph uses the supported `getCanvasMenuItems` extension hook and the active graph supplied by the canvas. It reads links from the graph's Map-based link collection and avoids the deprecated `ComfyApp.graph` getter.
+The package targets ComfyUI 0.46.0 or newer and Python 3.10 or newer, matching the current ComfyUI core requirements. Compatibility was re-checked against the ComfyUI 0.46.0 release and current core/frontend source on November 20, 2026. The v0.46.0 release included `comfyui-frontend-package` 1.59.6; the current ComfyUI `master` requirements now pin 1.59.10 (updated November 20, 2026). The standalone ComfyUI frontend release is 1.61.4. Auto Arrange Graph uses the supported `getCanvasMenuItems` extension hook and the active graph supplied by the canvas. It reads links from the graph's Map-based link collection and avoids the deprecated `ComfyApp.graph` getter.
 
 ## Troubleshooting
 

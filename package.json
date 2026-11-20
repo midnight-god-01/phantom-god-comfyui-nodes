@@ -1,6 +1,6 @@
 {
   "name": "phantom-god-comfyui-nodes",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "private": true,
   "type": "module",
   "description": "ComfyUI graph-canvas arrangement extension.",
