@@ -1,7 +1,7 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.5.9"
-description = "ComfyUI graph-canvas arrangement extension."
+version = "1.6.3"
+description = "ComfyUI graph arrangement and Pixaroma-style model-only LoRA stack node."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -15,7 +15,7 @@ classifiers = [
 Homepage = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes"
 Repository = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes"
 "Bug Tracker" = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes/issues"
-Upstream = "https://github.com/pythongosssss/ComfyUI-Custom-Scripts"
+Upstream = "https://github.com/pixaroma/ComfyUI-Pixaroma"
 
 [tool.comfy]
 requires-comfyui = ">=0.46.0"

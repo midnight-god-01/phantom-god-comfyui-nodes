@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: "26"
 
+      - name: Restore compressed LoRA frontend source
+        run: python -c "import gzip,pathlib; p=pathlib.Path('web/js/pixaromaLoraModelOnly.js.gz'); p.with_suffix('').write_bytes(gzip.decompress(p.read_bytes()))"
+
       - name: Check Python package and feature registry
         run: |
           python -m py_compile __init__.py features/*.py
@@ -35,8 +38,37 @@ jobs:
           from pathlib import Path
           import importlib.util
           import sys
+          import types
 
           root = Path.cwd()
+          folder_paths = types.ModuleType("folder_paths")
+          folder_paths.get_filename_list = lambda _kind: []
+          folder_paths.get_full_path = lambda _kind, name: name
+          comfy = types.ModuleType("comfy")
+          comfy.__path__ = []
+          comfy.sd = types.ModuleType("comfy.sd")
+          comfy.utils = types.ModuleType("comfy.utils")
+          server = types.ModuleType("server")
+
+          class Routes:
+              def get(self, _path):
+                  return lambda function: function
+
+          class PromptServer:
+              instance = types.SimpleNamespace(routes=Routes())
+
+          server.PromptServer = PromptServer
+          aiohttp = types.ModuleType("aiohttp")
+          aiohttp.web = types.SimpleNamespace(json_response=lambda payload, status=200: (status, payload))
+          sys.modules.update({
+              "folder_paths": folder_paths,
+              "comfy": comfy,
+              "comfy.sd": comfy.sd,
+              "comfy.utils": comfy.utils,
+              "server": server,
+              "aiohttp": aiohttp,
+          })
+
           spec = importlib.util.spec_from_file_location(
               "phantom_god_comfyui_nodes",
               root / "__init__.py",
@@ -47,24 +79,26 @@ jobs:
           spec.loader.exec_module(module)
 
           assert module.WEB_DIRECTORY == "./web/js"
-          assert module.NODE_CLASS_MAPPINGS == {}
-          assert module.NODE_DISPLAY_NAME_MAPPINGS == {}
+          assert set(module.NODE_CLASS_MAPPINGS) == {"PixaromaLoraModelOnly"}
+          assert set(module.NODE_DISPLAY_NAME_MAPPINGS) == {"PixaromaLoraModelOnly"}
+          node_class = module.NODE_CLASS_MAPPINGS["PixaromaLoraModelOnly"]
+          input_schema = node_class.INPUT_TYPES()
+          assert list(input_schema["required"]) == ["model", "lora_state"]
+          assert input_schema["required"]["model"][0] == "MODEL"
+          assert input_schema["required"]["lora_state"][0] == "STRING"
+          assert "hidden" not in input_schema
+          assert node_class.RETURN_TYPES == ("MODEL",)
           assert (root / module.WEB_DIRECTORY / "graphArrange.js").is_file()
-
-          removed_frontend_files = (
-              "concatenateText.js",
-              "environmentManager.js",
-              "multiLoraModelOnly.js",
-          )
-          for filename in removed_frontend_files:
-              assert not (root / module.WEB_DIRECTORY / filename).exists()
+          assert (root / module.WEB_DIRECTORY / "pixaromaLoraModelOnly.js").is_file()
           PY
 
       - name: Run Python package tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Check frontend JavaScript syntax
-        run: node --check web/js/graphArrange.js
+        run: |
+          node --check web/js/graphArrange.js
+          node --check web/js/pixaromaLoraModelOnly.js
 
       - name: Run frontend tests
         run: node --test
