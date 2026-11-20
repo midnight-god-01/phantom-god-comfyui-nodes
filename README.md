@@ -21,7 +21,7 @@ This package currently provides no custom workflow nodes. Auto Arrange Graph is 
 ## Installation
 
 1. Close ComfyUI.
-2. Open a terminal in the ComfyUI \`custom_nodes\` directory.
+2. Open a terminal in the ComfyUI `custom_nodes` directory.
 3. Clone this repository:
 
 ~~~~bash
@@ -50,7 +50,7 @@ The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. Auto Arran
 ## Troubleshooting
 
 - **The arrange commands are not visible:** Right-click an empty area of the graph canvas rather than a node.
-- **The browser extension does not load:** Confirm the repository is located at \`ComfyUI/custom_nodes/phantom-god-comfyui-nodes\`, restart the ComfyUI server, and hard-refresh the browser.
+- **The browser extension does not load:** Confirm the repository is located at `ComfyUI/custom_nodes/phantom-god-comfyui-nodes`, restart the ComfyUI server, and hard-refresh the browser.
 - **The package fails during startup:** Check the ComfyUI terminal for Python import errors and confirm the installed ComfyUI version meets the minimum requirement.
 
 ## Development
@@ -74,7 +74,7 @@ The repository keeps the frontend extension and tests separate:
 └── pyproject.toml
 ~~~~
 
-The \`features\` package retains automatic discovery for future Python node modules. The current package does not register any workflow nodes.
+The `features` package retains automatic discovery for future Python node modules. The current package does not register any workflow nodes.
 
 Run validation commands from the repository root:
 
