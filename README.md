@@ -1,8 +1,8 @@
 # Phantom God ComfyUI Nodes
 
-A modular custom-node pack for ComfyUI. It combines focused workflow utilities with frontend controls, while keeping each feature isolated in its own Python and JavaScript module.
+A lightweight ComfyUI custom-node package containing a graph-canvas arrangement extension.
 
-**Current version:** 1.5.6  
+**Current version:** 1.5.7  
 **Minimum requirements:** ComfyUI 0.45.0 or newer; Python 3.9 or newer
 
 ## Features
@@ -12,69 +12,16 @@ A modular custom-node pack for ComfyUI. It combines focused workflow utilities w
 Adds two commands to the graph canvas context menu:
 
 - **Arrange (float left)** uses ComfyUI's native graph arrangement.
-- **Arrange (float right)** places nodes by execution order, right-aligns nodes within columns, and moves upstream nodes toward their earliest downstream use. Save Image and Preview Image nodes are prioritized within each column.
+- **Arrange (float right)** arranges nodes by execution order, right-aligns nodes within columns, and moves upstream nodes toward their earliest downstream use. Save Image and Preview Image nodes are prioritized within each column.
 
 To access the commands, right-click an empty area of the graph canvas. These are canvas actions, not workflow nodes.
 
-### Concatenate Text (Phantom God)
-
-Find the node under **Phantom God / Text**.
-
-- Starts with two optional multiline text fields.
-- Use **Add Text** to create additional fields. Each field has a matching STRING input socket.
-- Every field has an individual remove control, including the first two default fields. Orphaned widgets are reconciled after ComfyUI restores graph inputs.
-- All text fields are optional, so the node remains valid when every field is removed.
-- Choose any delimiter, including spaces, commas, pipes, or newline characters. The default delimiter is one space.
-- Values are joined in numeric field order: Text 1, Text 2, Text 3, and so on.
-- Empty values are skipped, preventing unwanted repeated delimiters.
-- Remaining field values are restored when a workflow is reopened. Named widget values are preferred, with a positional fallback for older workflow data.
-
-The node returns a single STRING output.
-
-### Multi LoRA Loader (Model Only) (Phantom God)
-
-Find the node under **Phantom God / Model**.
-
-- Accepts one MODEL input and returns one modified MODEL output. It has no CLIP input or output.
-- Supports any number of ordered LoRA rows; no UI or backend row cap is imposed.
-- Each row has its own file selector, strength value, ON/OFF control, and remove button.
-- The selector reads the available files from ComfyUI's LoRA model directory endpoint. Use **Refresh** after adding or removing model files while ComfyUI is running.
-- Enabled rows are applied sequentially in their displayed order. Disabled, unselected, and zero-strength rows are skipped.
-- Strength values can range from -100 to +100.
-- Row order, filenames, strengths, and enabled states are saved with the workflow. The workflow stores references to model files, not copies of the LoRA weights.
-- The backend uses ComfyUI's safe tensor-loading and model-patching APIs. It retains at most one raw LoRA state dictionary in the node cache.
-- Changes to a LoRA file at the same path are detected using its file signature; the cached state dictionary is reloaded when the file changes.
-- Missing LoRAs and LoRAs with no compatible diffusion-model weights produce a node execution error with the affected filename. If a LoRA contains some matching model weights plus unrelated weights, ComfyUI may still log warnings for the unmatched keys.
-
-
-
-### Node UI audit (1.5.5)
-
-The Concatenate Text and Multi LoRA controls use width-aware layouts and preserve ComfyUI's native multiline widget behavior. Concatenate Text has an individual ON/OFF toggle and a separate delete button for every field; OFF fields are excluded from the execution prompt, including linked inputs. Nested subgraph prompt state is matched by full execution path to avoid applying one node's state to another node with the same local ID. Multi LoRA has no fixed row-count limit, measures its live DOM content (including loading and error states), hides its serialized state in Classic LiteGraph and Nodes 2.0, and reports when a selected LoRA adds no diffusion-model patches. Environment Manager measures its live DOM content, only scans after an explicit user action, checks interpreter compatibility against published Triton wheel ranges, and blocks SageAttention while a conflicting legacy Windows Triton package is installed.
-
-### Environment Manager (Phantom God)
-
-Find the node under **Phantom God / System**. It inspects the active ComfyUI Python environment and lets you check, install, update, or repair Triton and SageAttention independently.
-
-- Reports the exact Python executable, Python version, pip availability/version, PyTorch version, PyTorch CUDA runtime, CUDA availability, NVIDIA GPU, compute capability, and driver version when available.
-- Checks Triton against the PyTorch-compatible version line. On Windows it uses the `triton-windows` distribution; on Linux it uses the official `triton` distribution.
-- Checks SageAttention against a prebuilt wheel matching the active Python, PyTorch, CUDA runtime, operating system, and GPU architecture. It requires the exact Triton minor matched to the active PyTorch version, with a successful import. Triton and SageAttention import checks run in isolated child interpreters so native DLLs are not held open in ComfyUI during package replacement. The wheel check also enforces CUDA 12.0+ and SageAttention's published compute-capability targets. It uses the Comfy-Org wheel index and does not guess a nearby build.
-- Installs into the same Python executable that is running ComfyUI. Triton and SageAttention have separate install/update controls; install a compatible Triton build before SageAttention.
-- Does not upgrade, uninstall, or replace PyTorch or its dependencies. Installs use pip with dependency resolution disabled.
-- Requires a restart of ComfyUI after a successful installation before testing the package.
-
-The node requires a CUDA-enabled NVIDIA PyTorch environment for these two packages. SageAttention prebuilt wheels currently target compute capabilities 8.0, 8.6, 8.9, 9.0, 10.0, 12.0, and 12.1. CUDA minimums are architecture-specific: 12.0 for Ampere, 12.4 for Ada, 12.3 for Hopper, and 12.8 for Blackwell. If the exact SageAttention wheel is not available for the active environment, the node reports the mismatch instead of attempting a source build. Environment Manager is a manual utility; it is not an automatic workflow output. It does not scan when the node is created; checks run only after selecting Check All or a package-specific Check button.
-
-## Updating and loading node changes
-
-After updating this custom-node folder, fully restart the ComfyUI Python process. A browser refresh alone cannot register new Python node classes. Then hard-refresh the browser page (Ctrl+Shift+R) so ComfyUI reloads the JavaScript extensions.
-
-On startup, this pack prints the registered node type names to the ComfyUI console. Confirm that `PhantomGodMultiLoraModelOnly` appears there before searching for **Multi LoRA Loader (Model Only)** in the node picker.
+This package currently provides no custom workflow nodes. Auto Arrange Graph is its only shipped feature.
 
 ## Installation
 
 1. Close ComfyUI.
-2. Open a terminal in the ComfyUI custom_nodes directory.
+2. Open a terminal in the ComfyUI \`custom_nodes\` directory.
 3. Clone this repository:
 
 ~~~~bash
@@ -94,89 +41,51 @@ cd phantom-god-comfyui-nodes
 git pull
 ~~~~
 
-Restart the ComfyUI server after updating Python code. Then refresh the browser interface. A browser refresh alone does not reload Python node definitions.
+Restart the ComfyUI server after updating. Then refresh the browser interface so ComfyUI reloads the JavaScript extension.
 
 ## Compatibility
 
-The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. Triton 3.9 compatibility checks include Python 3.15, matching the current stable-ABI wheel support for the PyTorch 2.15 line. The compatibility review cross-checked current ComfyUI core and standalone frontend source on November 18, 2026, in addition to retaining the declared minimum of ComfyUI 0.45.0. The repository's CI checks mocked Python and frontend behavior; it does not perform GPU inference against an installed ComfyUI runtime. Frontend APIs can evolve independently of the core application, so behavior may vary across frontend builds.
-
-The Auto Arrange Graph extension uses ComfyUI's extension registration and canvas-menu APIs. It reads graph links through the current Map-based link collection rather than patching legacy canvas prototypes.
-
-The Concatenate Text node uses dynamically named optional STRING inputs. Its frontend keeps each widget, socket, and remove control synchronized.
-
-The Multi LoRA Loader stores its interface state in node properties and inserts that state into the hidden backend input when ComfyUI builds the execution prompt. The backend applies LoRAs to MODEL only, using no CLIP object.
+The package declares ComfyUI 0.45.0 or newer and Python 3.9 or newer. Auto Arrange Graph uses ComfyUI's extension registration and canvas-menu APIs. It reads graph links through the current Map-based link collection rather than patching legacy canvas prototypes.
 
 ## Troubleshooting
 
-- **A node does not appear:** Confirm the repository is located at ComfyUI/custom_nodes/phantom-god-comfyui-nodes and that the server was restarted.
-- **The browser controls do not appear:** Refresh the browser after restarting ComfyUI. Check the browser developer console for messages beginning with [Phantom God].
-- **A LoRA is missing from the selector:** Confirm the file is inside one of ComfyUI's configured LoRA directories, then use the selector's Refresh control.
-- **A saved workflow reports a missing LoRA:** Restore the referenced file or choose an available replacement in the node.
-- **A node fails during startup:** Check the ComfyUI terminal for Python import errors and confirm the installed ComfyUI version meets the minimum requirement.
 - **The arrange commands are not visible:** Right-click an empty area of the graph canvas rather than a node.
+- **The browser extension does not load:** Confirm the repository is located at \`ComfyUI/custom_nodes/phantom-god-comfyui-nodes\`, restart the ComfyUI server, and hard-refresh the browser.
+- **The package fails during startup:** Check the ComfyUI terminal for Python import errors and confirm the installed ComfyUI version meets the minimum requirement.
 
 ## Development
 
-The repository keeps backend features, frontend extensions, and tests separate:
+The repository keeps the frontend extension and tests separate:
 
 ~~~~text
 .
 ├── __init__.py
 ├── features/
-│   ├── __init__.py
-│   ├── concatenate_text.py
-│   ├── environment_manager.py
-│   └── multi_lora_model_only.py
+│   └── __init__.py
 ├── web/
 │   └── js/
-│       ├── concatenateText.js
-│       ├── environmentManager.js
-│       ├── graphArrange.js
-│       └── multiLoraModelOnly.js
+│       └── graphArrange.js
 ├── tests/
+│   ├── graphArrange.test.mjs
+│   └── test_feature_registry.py
 ├── CHANGELOG.md
 ├── LICENSE
 ├── package.json
 └── pyproject.toml
 ~~~~
 
-To add a Python node, create a module directly inside features/ and export NODE_CLASS_MAPPINGS. NODE_DISPLAY_NAME_MAPPINGS is optional. The feature registry discovers non-private Python modules in that directory and merges their mappings; duplicate mapping keys raise an error.
+The \`features\` package retains automatic discovery for future Python node modules. The current package does not register any workflow nodes.
 
-A minimal node module looks like this:
-
-~~~~python
-class ExampleNode:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {"text": ("STRING", {"default": ""})}}
-
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "run"
-    CATEGORY = "Phantom God/Examples"
-
-    def run(self, text):
-        return (text,)
-
-
-NODE_CLASS_MAPPINGS = {"PhantomGodExampleNode": ExampleNode}
-NODE_DISPLAY_NAME_MAPPINGS = {"PhantomGodExampleNode": "Example Node"}
-~~~~
-
-For frontend behavior, add a JavaScript module directly inside web/js/ and register it with app.registerExtension(). Add regression tests under tests/.
-
-Run the validation commands from the repository root:
+Run validation commands from the repository root:
 
 ~~~~bash
 python -m py_compile __init__.py features/*.py
 python -m unittest discover -s tests -p 'test_*.py' -v
 node --check web/js/graphArrange.js
-node --check web/js/concatenateText.js
-node --check web/js/multiLoraModelOnly.js
-node --check web/js/environmentManager.js
 node --test
 ~~~~
 
-GitHub Actions runs the Python checks, feature-registry checks, JavaScript syntax checks, and frontend tests on pushes and pull requests.
+GitHub Actions runs the Python package and registry checks, JavaScript syntax validation, and frontend tests.
 
 ## Attribution and licensing
 

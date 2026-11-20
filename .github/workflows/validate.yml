@@ -43,27 +43,24 @@ jobs:
           spec.loader.exec_module(module)
 
           assert module.WEB_DIRECTORY == "./web/js"
-          assert "PhantomGodConcatenateText" in module.NODE_CLASS_MAPPINGS
-          assert module.NODE_DISPLAY_NAME_MAPPINGS["PhantomGodConcatenateText"] == "Concatenate Text (Phantom God)"
-          assert "PhantomGodMultiLoraModelOnly" in module.NODE_CLASS_MAPPINGS
-          assert "PhantomGodEnvironmentManager" in module.NODE_CLASS_MAPPINGS
-          assert module.NODE_DISPLAY_NAME_MAPPINGS["PhantomGodMultiLoraModelOnly"] == "Multi LoRA Loader (Model Only) (Phantom God)"
-          assert module.NODE_DISPLAY_NAME_MAPPINGS["PhantomGodEnvironmentManager"] == "Environment Manager (Phantom God)"
+          assert module.NODE_CLASS_MAPPINGS == {}
+          assert module.NODE_DISPLAY_NAME_MAPPINGS == {}
           assert (root / module.WEB_DIRECTORY / "graphArrange.js").is_file()
-          assert (root / module.WEB_DIRECTORY / "concatenateText.js").is_file()
-          assert (root / module.WEB_DIRECTORY / "multiLoraModelOnly.js").is_file()
-          assert (root / module.WEB_DIRECTORY / "environmentManager.js").is_file()
+
+          removed_frontend_files = (
+              "concatenateText.js",
+              "environmentManager.js",
+              "multiLoraModelOnly.js",
+          )
+          for filename in removed_frontend_files:
+              assert not (root / module.WEB_DIRECTORY / filename).exists()
           PY
 
-      - name: Run Python node tests
+      - name: Run Python package tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Check frontend JavaScript syntax
-        run: |
-          node --check web/js/graphArrange.js
-          node --check web/js/concatenateText.js
-          node --check web/js/multiLoraModelOnly.js
-          node --check web/js/environmentManager.js
+        run: node --check web/js/graphArrange.js
 
       - name: Run frontend tests
         run: node --test

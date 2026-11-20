@@ -1,7 +1,7 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.5.6"
-description = "ComfyUI nodes and frontend tools for graph arrangement, text concatenation, model-only multi-LoRA stacking, and CUDA environment management."
+version = "1.5.7"
+description = "ComfyUI graph-canvas arrangement extension."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

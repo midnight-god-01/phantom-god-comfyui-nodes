@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.7 — 2026-11-20
+
+- Remove Concatenate Text, Environment Manager, and Multi LoRA Loader, including their Python modules, frontend extensions, and feature-specific tests.
+- Retain Auto Arrange Graph as the only shipped feature and update documentation, package metadata, and CI validation accordingly.
+
 ## 1.5.6 — 2026-11-18
 
 - Make Environment Manager DOM-widget visibility adapt to Classic LiteGraph and Nodes 2.0, and recalculate layout after the browser paints.
