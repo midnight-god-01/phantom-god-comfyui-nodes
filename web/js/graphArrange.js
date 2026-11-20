@@ -1,13 +1,13 @@
 import { app } from "../../scripts/app.js";
 
 const EXTENSION_NAME = "PhantomGod.AutoArrangeGraph";
-const VERSION = "1.5.7";
+const VERSION = "1.5.8";
 const MARGIN = 50;
 const FALLBACK_TITLE_HEIGHT = 30;
 
 function getActiveGraph(canvas) {
     // The canvas graph is authoritative, including when a subgraph is open.
-    return canvas?.graph ?? app.rootGraphOrUndefined ?? app.rootGraph ?? app.graph ?? null;
+    return canvas?.graph ?? null;
 }
 
 function getNodeSize(node) {

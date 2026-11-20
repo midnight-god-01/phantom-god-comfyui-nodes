@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.8 — 2026-11-20
+
+- Audit Auto Arrange Graph against ComfyUI 0.46.0, bundled frontend 1.59.6, and standalone frontend 1.61.4.
+- Remove the deprecated ComfyApp.graph fallback and use the active graph supplied by the canvas-menu hook.
+- Require ComfyUI 0.46.0 and Python 3.10 or newer; add regression coverage for active-canvas graph selection.
+- Align package and extension version metadata at 1.5.8.
+
+
 ## 1.5.7 — 2026-11-20
 
 - Remove Concatenate Text, Environment Manager, and Multi LoRA Loader, including their Python modules, frontend extensions, and feature-specific tests.

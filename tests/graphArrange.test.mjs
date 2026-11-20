@@ -13,9 +13,12 @@ function loadExtension() {
     const extensions = [];
     const context = {
         app: {
-            rootGraphOrUndefined: undefined,
-            rootGraph: undefined,
-            graph: undefined,
+            get graph() {
+                throw new Error("The deprecated ComfyApp.graph getter must not be accessed.");
+            },
+            get rootGraph() {
+                throw new Error("Canvas actions must use the active canvas graph.");
+            },
             registerExtension(extension) {
                 extensions.push(extension);
             },
@@ -69,6 +72,20 @@ test("registers only the two canvas arrange commands", () => {
         "Arrange (float right)",
     ]);
     assert.ok(items.every((item) => typeof item.callback === "function"));
+});
+
+
+test("uses the active canvas graph without accessing deprecated app graph getters", () => {
+    const extension = loadExtension();
+    const activeSubgraph = {
+        calls: 0,
+        arrange() { this.calls += 1; },
+    };
+    const [floatLeft] = extension.getCanvasMenuItems({ graph: activeSubgraph });
+
+    floatLeft.callback();
+
+    assert.equal(activeSubgraph.calls, 1);
 });
 
 test("float-left delegates to ComfyUI's native graph arrange method", () => {
