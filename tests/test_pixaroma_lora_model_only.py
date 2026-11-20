@@ -39,7 +39,7 @@ def load_feature():
 
     aiohttp = types.ModuleType("aiohttp")
     aiohttp.web = types.SimpleNamespace(
-        json_response=lambda payload, status=200: (payload, status)
+        json_response=lambda payload, status=200: (status, payload)
     )
 
     modules = {
