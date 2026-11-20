@@ -1,9 +1,9 @@
 {
   "name": "phantom-god-comfyui-nodes",
-  "version": "1.5.9",
+  "version": "1.6.3",
   "private": true,
   "type": "module",
-  "description": "ComfyUI graph-canvas arrangement extension.",
+  "description": "ComfyUI graph arrangement and Pixaroma-style model-only LoRA loader.",
   "scripts": {
     "test": "node --test"
   }
