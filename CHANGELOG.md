@@ -112,7 +112,7 @@
 
 - Added Multi LoRA Loader (Model Only): up to 64 individually selectable LoRAs, each with its own strength, enable toggle, and remove control.
 - Added model-only LoRA application through ComfyUI's official model patching API, without CLIP inputs or outputs.
-- Added workflow-persisted LoRA row state, live LoRA file listing, and file-change cache invalidation.
+- Added workflow-persisted LoRA row state, live LoRA file listing, list refresh, and file-change cache invalidation.
 - Reworked Concatenate Text controls with a rounded Add Text button and per-field remove controls.
 - Made every Concatenate Text field optional so any individual field, including the first two, can be removed safely.
 - Standardized dynamically added text placeholders and labels to "Text N".
