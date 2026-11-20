@@ -37,6 +37,7 @@
 - Confirm the active canvas graph, canvas-menu extension hook, execution-order calculation, graph link Map, node positioning, and canvas invalidation APIs remain available.
 - Align package and extension version metadata at 1.5.9.
 
+
 ## 1.5.8 — 2026-11-20
 
 - Audit Auto Arrange Graph against ComfyUI 0.46.0, bundled frontend 1.59.6, and standalone frontend 1.61.4.
@@ -44,7 +45,138 @@
 - Require ComfyUI 0.46.0 and Python 3.10 or newer; add regression coverage for active-canvas graph selection.
 - Align package and extension version metadata at 1.5.8.
 
+
 ## 1.5.7 — 2026-11-20
 
 - Remove Concatenate Text, Environment Manager, and Multi LoRA Loader, including their Python modules, frontend extensions, and feature-specific tests.
 - Retain Auto Arrange Graph as the only shipped feature and update documentation, package metadata, and CI validation accordingly.
+
+## 1.5.6 — 2026-11-18
+
+- Make Environment Manager DOM-widget visibility adapt to Classic LiteGraph and Nodes 2.0, and recalculate layout after the browser paints.
+- Remove stale native text widgets after graph restoration so Concatenate Text shows only its active dynamic inputs.
+- Add lifecycle fallbacks and explicit visible diagnostics when Environment Manager or Multi LoRA UI initialization fails.
+- Log registered node type IDs at ComfyUI startup, expand Multi LoRA search aliases, and test backend registration.
+
+- Reconcile Concatenate Text native widgets after ComfyUI finishes graph configuration, removing orphaned text fields from restored or edited workflows.
+- Add node-added lifecycle fallbacks and visible error reporting for Multi LoRA and Environment Manager frontend initialization, including a clear fallback when `addDOMWidget` is unavailable.
+- Add registry checks to ensure all three workflow nodes, including the model-only LoRA node, are exported.
+
+- Extend the PyTorch 2.15 / Triton 3.9 compatibility range through Python 3.15 on Windows and Linux, matching current stable-ABI wheel support.
+- Add platform-specific regression tests for Python 3.15 Triton selection.\n- Run native Triton and SageAttention import checks in isolated child interpreters so DLLs are not left loaded in the ComfyUI process during package replacement.
+
+## 1.5.5 — 2026-11-18
+
+- Cross-checked every feature against current ComfyUI core and frontend source.
+- Detect enabled LoRAs that add no compatible diffusion-model patches, rather than silently passing through an unchanged model.
+- Narrowed LoRA loader compatibility fallbacks so deserialization and patching TypeErrors are not hidden.
+- Fixed nested-subgraph prompt-state lookup to use full execution paths, including repeated subgraph instances; unmatched paths preserve generated inputs.
+- Made Environment Manager checks strictly user-initiated instead of scanning when the node is created.
+- Added Triton Python-wheel version bounds and retained Windows legacy Triton conflict status; SageAttention is blocked until the conflict is resolved.
+- Added regression tests for LoRA weight matching, nested subgraph injection, manual environment scans, Triton compatibility, and installer conflicts.
+
+
+## 1.5.4 — 2026-11-18
+
+- Reworked Multi LoRA content sizing to measure live DOM children and recalculate the Nodes 2.0 layout height on demand.
+- Included loading and error rows in the calculated node height to avoid clipping during asynchronous model-list loading or API errors.
+- Added regression coverage for layout growth when additional DOM status content is rendered.
+
+
+## 1.5.3 — 2026-11-18
+
+- Prevented Environment Manager from running environment scans automatically as a workflow output; checks remain available through its explicit UI action or when its STRING output is connected.
+- Restricted SageAttention wheel matching to the compute capabilities published by the upstream build and enforced GPU-specific CUDA minimums: 12.0 for Ampere, 12.4 for Ada, 12.3 for Hopper, and 12.8 for Blackwell.
+- Added regression tests for unsupported GPU architectures, CUDA minimum version, and manual-only Environment Manager execution.
+
+
+## 1.5.2 — 2026-11-18
+
+- Audited every pack feature: Auto Arrange Graph, Concatenate Text, Multi LoRA Loader, and Environment Manager.
+- Made Concatenate Text OFF switches exclude values from the execution prompt, including values supplied through linked sockets.
+- Corrected Concatenate Text DOM control sizing using rendered content measurements while preserving ComfyUI's native multiline widget sizing.
+- Required an importable Triton version matching the active PyTorch compatibility line before enabling SageAttention installation.
+- Added the verified PyTorch 2.15 → Triton 3.9 pairing for Linux.
+- Made Environment Manager layout content-aware, aligned its install polling window with the backend timeout, and stopped client polling when its node is removed.
+- Preserved execution level zero when arranging upstream nodes into separate columns; added a regression test for the first-use edge case.
+- Added regression tests for execution toggles, package prerequisites, live layout sizing, and node cleanup.
+- Updated README feature inventory, supported LoRA row count, development file tree, and validation commands.
+
+
+## 1.5.1 — 2026-11-18
+
+- Fixed Concatenate Text collapsing native multiline text widgets by preserving ComfyUI's widget sizing.
+- Explicitly hid the serialized Multi LoRA state widget in both Classic and Nodes 2.0, preventing raw JSON from appearing in the node body.
+- Removed the 64-row restriction from the Python LoRA state parser as well as the frontend.
+- Added regressions for text widget sizing, hidden state widget handling, and 70-row stacks.
+
+
+## 1.5.0 — 2026-11-18
+
+- Rebuilt Concatenate Text controls into responsive, non-scrolling rows with per-field enable/disable toggles and separate delete buttons.
+- Added width-aware text widget sizing and resize callbacks for Classic and Nodes 2.0.
+- Reworked Multi LoRA controls with fluid rows, improved narrow-width behavior, and live content-height sizing.
+- Removed the fixed 64-row LoRA UI limit.
+- Added frontend regression tests for field toggles, resizing and LoRA stacks beyond 64 rows.
+
+
+## 1.4.0 — 2026-11-18
+
+- Added Environment Manager node to inspect the active ComfyUI Python, PyTorch, CUDA, GPU, and driver environment.
+- Added separate Triton and SageAttention compatibility checks, install/update controls, and job-status reporting.
+- Added PyTorch-matched Triton version selection for Windows and Linux.
+- Added exact Python/PyTorch/CUDA/platform wheel matching through the Comfy-Org SageAttention wheel index.
+- Installer uses the active ComfyUI Python executable, binary packages only, and disables dependency upgrades so it does not replace PyTorch.
+- Added backend compatibility tests and frontend validation coverage.
+
+
+## 1.3.1 — 2026-11-18
+
+- Reload cached LoRA weights when a model file changes at the same path.
+- Reject absolute LoRA paths and path-traversal segments in workflow-supplied state.
+- Added regression coverage for file replacement and unsafe LoRA paths.
+- Rewrote the README with installation, feature, compatibility, development, and troubleshooting guidance.
+- Clarified MIT licensing and retained the upstream Auto Arrange Graph copyright notice.
+- Aligned package and frontend extension version metadata at 1.3.1.
+
+## 1.3.0 — 2026-11-18
+
+- Added Multi LoRA Loader (Model Only): up to 64 individually selectable LoRAs, each with its own strength, enable toggle, and remove control.
+- Added model-only LoRA application through ComfyUI's official model patching API, without CLIP inputs or outputs.
+- Added workflow-persisted LoRA row state, live LoRA file listing, list refresh, and file-change cache invalidation.
+- Reworked Concatenate Text controls with a rounded Add Text button and per-field remove controls.
+- Made every Concatenate Text field optional so any individual field, including the first two, can be removed safely.
+- Standardized dynamically added text placeholders and labels to "Text N".
+- Added Python and frontend regression tests for LoRA stacking, independent toggles, workflow prompt injection, and row removal.
+
+## 1.2.1 — 2026-11-18
+
+- Fixed dynamic backend input schema lookup for ComfyUI's membership-plus-index access pattern.
+- Restored dynamic widget values by name on recent frontends, with positional fallback for older workflow files.
+- Kept the Add Text control label stable after workflow restoration.
+- Added regression tests for dynamic input lookup and both workflow restoration formats.
+- Audited extension hooks and widget constructors against ComfyUI v0.45.0 with bundled frontend 1.58.5 and standalone frontend 1.61.2.
+
+## 1.2.0 — 2026-11-17
+
+- Added the draggable Concatenate Text (Phantom God) backend node.
+- Added an Add Text control with multiline text widgets and matching STRING sockets.
+- Added workflow restoration for dynamically created text fields.
+- Added automatic Python feature discovery through the features package.
+- Updated package documentation and CI to cover backend nodes and frontend features.
+- Preserved the existing Auto Arrange Graph feature and its tests.
+
+## 1.1.0 — 2026-11-17
+
+- Audited the extension against ComfyUI v0.45.0 and frontend package 1.59.2.
+- Exported the empty NODE_CLASS_MAPPINGS required for a successful frontend-only V1 custom-node load.
+- Kept the official canvas context-menu extension hook.
+- Restored the original float-right earliest-downstream-use placement behavior using the current graph links Map API.
+- Removed the legacy indexed-link access and canvas prototype patching approach.
+- Updated GitHub Actions to current v7 action releases and Node.js 26 LTS.
+- Added a regression test for branching graph placement.
+
+## 1.0.0 — 2026-11-17
+
+- Initial Phantom God ComfyUI Nodes release.
+- Includes the Auto Arrange Graph canvas-menu feature.
