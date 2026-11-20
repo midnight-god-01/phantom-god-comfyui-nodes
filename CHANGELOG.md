@@ -24,13 +24,15 @@
 
 - Make Environment Manager DOM-widget visibility adapt to Classic LiteGraph and Nodes 2.0, and recalculate layout after the browser paints.
 - Remove stale native text widgets after graph restoration so Concatenate Text shows only its active dynamic inputs.
-- Add lifecycle fallbacks and explicit visible diagnostics when Multi LoRA UI initialization fails.
+- Add lifecycle fallbacks and explicit visible diagnostics when Environment Manager or Multi LoRA UI initialization fails.
+- Log registered node type IDs at ComfyUI startup, expand Multi LoRA search aliases, and test backend registration.
 
 - Reconcile Concatenate Text native widgets after ComfyUI finishes graph configuration, removing orphaned text fields from restored or edited workflows.
 - Add node-added lifecycle fallbacks and visible error reporting for Multi LoRA and Environment Manager frontend initialization, including a clear fallback when `addDOMWidget` is unavailable.
 - Add registry checks to ensure all three workflow nodes, including the model-only LoRA node, are exported.
 
-- Extend the PyTorch 2.15 / Triton 3.9 compatibility range through Python 3.15 on Windows and Linux, matching current stable-ABI wheel support.\n- Run native Triton and SageAttention import checks in isolated child interpreters so DLLs are not left loaded in the ComfyUI process during package replacement.
+- Extend the PyTorch 2.15 / Triton 3.9 compatibility range through Python 3.15 on Windows and Linux, matching current stable-ABI wheel support.
+- Add platform-specific regression tests for Python 3.15 Triton selection.\n- Run native Triton and SageAttention import checks in isolated child interpreters so DLLs are not left loaded in the ComfyUI process during package replacement.
 
 ## 1.5.5 — 2026-11-18
 
@@ -110,7 +112,7 @@
 
 - Added Multi LoRA Loader (Model Only): up to 64 individually selectable LoRAs, each with its own strength, enable toggle, and remove control.
 - Added model-only LoRA application through ComfyUI's official model patching API, without CLIP inputs or outputs.
-- Added workflow-persisted LoRA row state, live LoRA file listing, list refresh, and file-change cache invalidation.
+- Added workflow-persisted LoRA row state, live LoRA file listing, and file-change cache invalidation.
 - Reworked Concatenate Text controls with a rounded Add Text button and per-field remove controls.
 - Made every Concatenate Text field optional so any individual field, including the first two, can be removed safely.
 - Standardized dynamically added text placeholders and labels to "Text N".
