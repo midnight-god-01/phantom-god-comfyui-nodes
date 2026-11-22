@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.2 — 2026-11-22
+
+- Fix Classic LiteGraph detection-panel positioning when resizing Prompt Adherence Enhancer Pro.
+- Include the detection panel in the node's computed minimum dimensions so manual resizing cannot compress it over the final widgets.
+- Anchor the panel directly below the measured widget stack so enlarging the node does not move the information display.
+- Add frontend regression tests for minimum-height enforcement and stable panel positioning.
+- Align package, README, changelog, and frontend extension version metadata at 1.6.2.
+
+
 ## 1.6.1 — 2026-11-22
 
 - Fix Prompt Adherence Enhancer Pro detection display in Classic LiteGraph with a canvas-rendered panel; retain read-only widgets in Nodes 2.0.

@@ -1,6 +1,6 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.6.1"
+version = "1.6.2"
 description = "ComfyUI graph arrangement and architecture-aware model enhancement nodes."
 readme = "README.md"
 license = "MIT"

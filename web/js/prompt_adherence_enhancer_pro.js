@@ -79,6 +79,28 @@ function removeVueWidgets(node) {
     }
 }
 
+function installMinimumLayout(node) {
+    // LiteGraph calls computeSize() to enforce the minimum dimensions while
+    // the user drags a resize handle. Include the Classic detection panel in
+    // that result so it cannot be compressed over the final node widgets.
+    if (typeof node.computeSize !== "function" || node._paaBaseComputeSize) return;
+
+    node._paaBaseComputeSize = node.computeSize.bind(node);
+    node.computeSize = function (...args) {
+        const baseSize = this._paaBaseComputeSize(...args) ?? [MIN_NODE_WIDTH, 100];
+        const vueMode = isVueNodesMode();
+        return [
+            Math.max(baseSize[0] ?? 0, vueMode ? VUE_NODE_MIN_WIDTH : MIN_NODE_WIDTH),
+            Math.max(baseSize[1] ?? 0, 0) + (vueMode ? 0 : CLASSIC_PANEL_HEIGHT),
+        ];
+    };
+}
+
+function getBaseSize(node) {
+    const measured = node._paaBaseComputeSize?.() ?? [MIN_NODE_WIDTH, 100];
+    return [Math.max(measured[0] ?? 0, MIN_NODE_WIDTH), Math.max(measured[1] ?? 0, 0)];
+}
+
 function applyRendererLayout(node) {
     const vueMode = isVueNodesMode();
     if (vueMode) {
@@ -87,11 +109,17 @@ function applyRendererLayout(node) {
         removeVueWidgets(node);
     }
 
+    installMinimumLayout(node);
+
     const measured = node.computeSize?.();
     if (Array.isArray(measured) && node.setSize) {
-        const width = Math.max(measured[0] ?? 0, vueMode ? VUE_NODE_MIN_WIDTH : MIN_NODE_WIDTH);
-        const height = (measured[1] ?? node.size?.[1] ?? 100) + (vueMode ? 0 : CLASSIC_PANEL_HEIGHT);
-        node.setSize([width, height]);
+        // Keep the existing user size, but never let the node start below the
+        // measured minimum required for its widgets and detection display.
+        const current = node.size ?? measured;
+        node.setSize([
+            Math.max(current[0] ?? 0, measured[0] ?? 0),
+            Math.max(current[1] ?? 0, measured[1] ?? 0),
+        ]);
     }
 
     node.setDirtyCanvas?.(true, true);
@@ -142,7 +170,9 @@ function drawClassicDetectionPanel(node, ctx) {
     const width = Math.max(120, (node.size?.[0] ?? MIN_NODE_WIDTH) - 16);
     const panelHeight = CLASSIC_PANEL_HEIGHT - 8;
     const x = 8;
-    const y = Math.max(4, (node.size?.[1] ?? panelHeight + 8) - CLASSIC_PANEL_HEIGHT + 4);
+    // Anchor the panel below the actual widget stack, not to the resizable
+    // node bottom. Its reserved area is included in computeSize() above.
+    const y = getBaseSize(node)[1] + 4;
     const model = node.properties?.paa_detected_model ?? DEFAULT_MODEL;
     const details = node.properties?.paa_detection_details ?? DEFAULT_DETAILS;
 
