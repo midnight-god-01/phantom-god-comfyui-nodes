@@ -1,10 +1,12 @@
 {
   "name": "phantom-god-comfyui-nodes",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "private": true,
   "type": "module",
   "description": "ComfyUI graph arrangement and architecture-aware model enhancement nodes.",
   "scripts": {
-    "test": "node --test"
+    "check:js": "node --check web/js/graphArrange.js && node --check web/js/prompt_adherence_enhancer_pro.js",
+    "test": "node --test",
+    "validate:js": "npm run check:js && npm test"
   }
 }
