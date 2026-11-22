@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -31,12 +33,14 @@ jobs:
       - name: Install CPU PyTorch for synthetic model tests
         run: python -m pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Check Python package and feature registry
+      - name: Check package metadata, Python compilation, and feature registry
         run: |
           python -m py_compile __init__.py features/*.py
           python - <<'PY'
           from pathlib import Path
           import importlib.util
+          import json
+          import re
           import sys
 
           root = Path.cwd()
@@ -56,15 +60,29 @@ jobs:
           assert module.NODE_DISPLAY_NAME_MAPPINGS[node_id] == "Prompt Adherence Enhancer Pro"
           assert (root / module.WEB_DIRECTORY / "graphArrange.js").is_file()
           assert (root / module.WEB_DIRECTORY / "prompt_adherence_enhancer_pro.js").is_file()
+
+          project_text = (root / "pyproject.toml").read_text()
+          project_version = re.search(r'^version = "([^"]+)"', project_text, re.MULTILINE).group(1)
+          package_version = json.loads((root / "package.json").read_text())["version"]
+          readme_version = re.search(r'^\*\*Current version:\*\* ([0-9]+\.[0-9]+\.[0-9]+)', (root / "README.md").read_text(), re.MULTILINE).group(1)
+          changelog_version = re.search(r'^## ([^ ]+)', (root / "CHANGELOG.md").read_text(), re.MULTILINE).group(1)
+          assert project_version == package_version == readme_version == changelog_version, (
+              project_version, package_version, readme_version, changelog_version
+          )
           PY
 
       - name: Run Python package and feature tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Check frontend JavaScript syntax
+      - name: Check and test frontend JavaScript
         run: |
-          node --check web/js/graphArrange.js
-          node --check web/js/prompt_adherence_enhancer_pro.js
+          npm run check:js
+          npm test
 
-      - name: Run frontend tests
-        run: node --test
+      - name: Check patch whitespace
+        run: |
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            git diff --check "origin/$GITHUB_BASE_REF...HEAD"
+          else
+            git diff --check HEAD^ HEAD
+          fi
