@@ -34,7 +34,7 @@ class FeatureRegistryTests(unittest.TestCase):
             r'^version = "([^"]+)"', project_text, re.MULTILINE
         ).group(1)
         readme_version = re.search(
-            r'^\*\*Current version:\*\* ([^ ]+)',
+            r'^\*\*Current version:\*\* ([0-9]+\.[0-9]+\.[0-9]+)',
             (ROOT / "README.md").read_text(),
             re.MULTILINE,
         ).group(1)
