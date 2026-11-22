@@ -91,11 +91,13 @@ function makeNodeType() {
 
 function makeCanvasContext() {
     const drawnText = [];
+    const rectangles = [];
     return {
         drawnText,
+        rectangles,
         save() {},
         restore() {},
-        fillRect() {},
+        fillRect(...args) { rectangles.push(args); },
         strokeRect() {},
         measureText(value) {
             return { width: String(value).length * 5 };
@@ -138,6 +140,39 @@ test("Classic LiteGraph renders the detected model in its canvas panel", async (
     assert.ok(context.drawnText.some((line) => line.includes("text_embedder")));
 });
 
+test("Classic LiteGraph reserves a minimum-height strip for model info during resize", async () => {
+    const { node } = await makeRegisteredNode(false);
+    const baseSize = node._paaBaseComputeSize();
+    const minimum = node.computeSize();
+
+    assert.equal(minimum[0], 360);
+    assert.equal(minimum[1], baseSize[1] + 78);
+
+    // LiteGraph clamps a resize request against node.computeSize(). This
+    // simulates dragging the resize handle below the minimum height.
+    const requestedShortHeight = minimum[1] - 40;
+    node.setSize([minimum[0], Math.max(requestedShortHeight, minimum[1])]);
+    assert.equal(node.size[1], minimum[1]);
+
+    node.onExecuted({
+        detected_model: ["Anima"],
+        detection_details: ["Class: FakeAnima | Adapter: post-LLM-adapter text-context scaling"],
+    });
+
+    const context = makeCanvasContext();
+    node.onDrawForeground(context);
+    assert.equal(context.rectangles.length, 1);
+    assert.equal(context.rectangles[0][1], baseSize[1] + 4);
+    assert.equal(context.rectangles[0][3], 70);
+
+    // Growing the node must not move the fixed information panel over or
+    // away from the controls; it stays immediately below the measured widgets.
+    node.setSize([minimum[0], minimum[1] + 120]);
+    const largerContext = makeCanvasContext();
+    node.onDrawForeground(largerContext);
+    assert.equal(largerContext.rectangles[0][1], baseSize[1] + 4);
+});
+
 test("Nodes 2.0 uses read-only widgets and receives execution output", async () => {
     const { node } = await makeRegisteredNode(true);
 
@@ -178,7 +213,7 @@ test("switching renderer modes rebuilds the display without reloading the workfl
     mode.vue = false;
     onModeChange();
     assert.equal(node.widgets.length, 0);
-    assert.deepEqual(Array.from(node.size), [360, 198]);
+    assert.deepEqual(Array.from(node.size), [460, 198]);
     assert.ok(state.dirtyCalls.length > 0);
 });
 
