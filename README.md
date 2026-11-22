@@ -1,6 +1,6 @@
 # Phantom God ComfyUI Nodes
 
-A lightweight ComfyUI custom-node package containing a graph-canvas arrangement extension.
+A ComfyUI custom-node pack combining graph-canvas arrangement and architecture-aware model enhancement.
 
 **Current version:** 1.5.9  
 **Minimum requirements:** ComfyUI 0.46.0 or newer; Python 3.10 or newer
@@ -16,7 +16,25 @@ Adds two commands to the graph canvas context menu:
 
 To access the commands, right-click an empty area of the graph canvas. These are canvas actions, not workflow nodes.
 
-This package currently provides no custom workflow nodes. Auto Arrange Graph is its only shipped feature.
+### Prompt Adherence Enhancer Pro
+
+Adds an architecture-aware workflow node with exactly one `MODEL` input and one `MODEL` output. All controls are widgets; it adds no CLIP, conditioning, prompt, image, latent, or text-encoder sockets.
+
+The node structurally detects the connected diffusion model and selects the matching adapter automatically:
+
+| Model family | Enhancement path |
+|---|---|
+| Krea 2 | Native 12-tap `txtfusion` residual enhancement, with optional `txtmlp` scaling |
+| Anima | Post-LLM-adapter text-context scaling |
+| MOSS-Image | Native `text_embedder` output scaling |
+| Qwen-Image 2.1 | Native `txt_in` projection scaling |
+| Z-Image / Z-Image-Turbo | Native `cap_embedder` caption scaling |
+
+The node displays the detected model family and selected adapter in two read-only rows. Detection is based on the underlying diffusion-model structure, not checkpoint or LoRA filenames. Architecture-compatible base, distilled/Turbo, and LoRA variants use the same adapter. Unsupported architectures pass through unchanged.
+
+Place the node after the diffusion model loader and all model/LoRA loaders, before KSampler. A built-in ComfyUI ModelPatcher clone normally retains the wrapper; placing the node after all loaders is recommended for compatibility with third-party loaders.
+
+The five adapter methods are architecture-specific inference-time modifications. They do not train weights or rewrite prompts, and improved image quality or prompt adherence is not guaranteed. See the node's Info description and `NOTICE-PROMPT-ADHERENCE.md` for implementation and attribution details.
 
 ## Installation
 
@@ -30,7 +48,7 @@ git clone https://github.com/midnight-god-01/phantom-god-comfyui-nodes.git
 
 4. Start ComfyUI again and refresh the browser interface.
 
-The repository does not require a separate pip or npm installation step. It uses the Python and frontend APIs provided by ComfyUI.
+The repository does not require a separate pip or npm installation step. The Prompt Adherence Enhancer uses PyTorch already provided by the ComfyUI environment, plus ComfyUI's Python and frontend APIs.
 
 ## Updating
 
@@ -61,13 +79,17 @@ The repository keeps the frontend extension and tests separate:
 .
 ├── __init__.py
 ├── features/
-│   └── __init__.py
+│   ├── __init__.py
+│   ├── prompt_adherence_enhancer_pro.py
+│   └── _paa_*.py              # private enhancer implementation modules
 ├── web/
 │   └── js/
-│       └── graphArrange.js
+│       ├── graphArrange.js
+│       └── prompt_adherence_enhancer_pro.js
 ├── tests/
 │   ├── graphArrange.test.mjs
-│   └── test_feature_registry.py
+│   ├── test_feature_registry.py
+│   └── test_*enhancer*.py
 ├── CHANGELOG.md
 ├── LICENSE
 ├── package.json
@@ -82,10 +104,11 @@ Run validation commands from the repository root:
 python -m py_compile __init__.py features/*.py
 python -m unittest discover -s tests -p 'test_*.py' -v
 node --check web/js/graphArrange.js
+node --check web/js/prompt_adherence_enhancer_pro.js
 node --test
 ~~~~
 
-GitHub Actions runs the Python package and registry checks, JavaScript syntax validation, and frontend tests.
+GitHub Actions installs CPU-only PyTorch for the synthetic model-adapter tests, then runs Python package and registry checks, JavaScript syntax validation, and frontend tests.
 
 ## Attribution and licensing
 
