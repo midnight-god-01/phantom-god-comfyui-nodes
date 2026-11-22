@@ -36,7 +36,9 @@ function loadExtension(initialVueMode = false) {
             graph: null,
             setDirty(...args) { dirtyCalls.push(args); },
         },
-        rootGraph: null,
+        get rootGraph() {
+            throw new Error("The extension must use the active canvas graph, not a root-graph accessor.");
+        },
         registerExtension(extension) { extensions.push(extension); },
     };
 
@@ -163,8 +165,7 @@ test("Nodes 2.0 uses read-only widgets and receives execution output", async () 
 test("switching renderer modes rebuilds the display without reloading the workflow", async () => {
     const state = await makeRegisteredNode(false);
     const { node, app, mode, settingListeners } = state;
-    app.rootGraph = { _nodes: [node] };
-    app.canvas.graph = app.rootGraph;
+    app.canvas.graph = { _nodes: [node] };
 
     await state.extension.setup();
     const onModeChange = settingListeners.get("Comfy.VueNodes.Enabled.change");
