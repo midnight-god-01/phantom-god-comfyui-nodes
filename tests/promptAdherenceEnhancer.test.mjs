@@ -204,4 +204,3 @@ test("the extension ignores unrelated node definitions", async () => {
 
     assert.equal(Node.prototype.onNodeCreated, original);
 });
-
