@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0 — 2026-11-22
+
+- Add Prompt Adherence Enhancer Pro as an automatically discovered MODEL-only workflow node.
+- Support structural model detection and architecture-specific adapters for Krea 2, Anima, MOSS-Image, Qwen-Image 2.1, and Z-Image.
+- Add read-only frontend fields showing the detected model family and selected adapter.
+- Add adapter, enhancement-math, node-registration, and detection-display regression tests.
+- Preserve Auto Arrange Graph and update package metadata and CI validation for PyTorch-backed synthetic tests.
+- Retain the Krea2T upstream MIT attribution in NOTICE-PROMPT-ADHERENCE.md.
+
 ## 1.5.9 — 2026-11-20
 
 - Re-check current ComfyUI core and frontend sources and correct the compatibility notes: ComfyUI v0.46.0 released with frontend package 1.59.6, while current ComfyUI master pins 1.59.10.
