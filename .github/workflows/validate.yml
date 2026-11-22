@@ -64,7 +64,7 @@ jobs:
           project_text = (root / "pyproject.toml").read_text()
           project_version = re.search(r'^version = "([^"]+)"', project_text, re.MULTILINE).group(1)
           package_version = json.loads((root / "package.json").read_text())["version"]
-          readme_version = re.search(r'^\*\*Current version:\*\* ([^ ]+)', (root / "README.md").read_text(), re.MULTILINE).group(1)
+          readme_version = re.search(r'^\*\*Current version:\*\* ([0-9]+\.[0-9]+\.[0-9]+)', (root / "README.md").read_text(), re.MULTILINE).group(1)
           changelog_version = re.search(r'^## ([^ ]+)', (root / "CHANGELOG.md").read_text(), re.MULTILINE).group(1)
           assert project_version == package_version == readme_version == changelog_version, (
               project_version, package_version, readme_version, changelog_version
