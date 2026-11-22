@@ -1,7 +1,7 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.5.9"
-description = "ComfyUI graph-canvas arrangement extension."
+version = "1.6.0"
+description = "ComfyUI graph arrangement and architecture-aware model enhancement nodes."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
