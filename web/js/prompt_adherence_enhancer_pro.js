@@ -171,7 +171,7 @@ function drawClassicDetectionPanel(node, ctx) {
 }
 
 function refreshAllNodes() {
-    const graphs = [app?.canvas?.graph, app?.rootGraph];
+    const graphs = [app?.canvas?.graph];
     const visited = new Set();
 
     for (const graph of graphs) {
