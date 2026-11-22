@@ -1,10 +1,10 @@
 [project]
 name = "phantom-god-comfyui-nodes"
-version = "1.6.0"
+version = "1.6.1"
 description = "ComfyUI graph arrangement and architecture-aware model enhancement nodes."
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE-PROMPT-ADHERENCE.md"]
 requires-python = ">=3.10"
 classifiers = [
     "Operating System :: OS Independent",
@@ -15,7 +15,7 @@ classifiers = [
 Homepage = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes"
 Repository = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes"
 "Bug Tracker" = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes/issues"
-Upstream = "https://github.com/pythongosssss/ComfyUI-Custom-Scripts"
+Documentation = "https://github.com/midnight-god-01/phantom-god-comfyui-nodes#readme"
 
 [tool.comfy]
 requires-comfyui = ">=0.46.0"

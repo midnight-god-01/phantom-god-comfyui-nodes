@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.1 — 2026-11-22
+
+- Fix Prompt Adherence Enhancer Pro detection display in Classic LiteGraph with a canvas-rendered panel; retain read-only widgets in Nodes 2.0.
+- Read the active renderer setting through ComfyUI's UI settings facade and rebuild the display when the renderer is switched.
+- Keep the detection result in node properties so both renderers can restore the last result after workflow loading.
+- Add frontend regression tests for Classic rendering, Nodes 2.0 widgets, execution updates, and live renderer switching.
+- Correct the README version, feature inventory, repository tree, validation commands, and development guidance.
+- Add contributor guidance, editor settings, and Git line-ending rules; align package metadata at 1.6.1.
+
 ## 1.6.0 — 2026-11-22
 
 - Add Prompt Adherence Enhancer Pro as an automatically discovered MODEL-only workflow node.
