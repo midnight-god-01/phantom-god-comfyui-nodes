@@ -100,7 +100,10 @@ The repository keeps backend feature modules, frontend extensions, and tests sep
 │   ├── test_enhancer_math.py
 │   ├── test_feature_registry.py
 │   └── test_registration.py
+├── .editorconfig
+├── .gitattributes
 ├── .github/workflows/validate.yml
+├── .gitignore
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── LICENSE
