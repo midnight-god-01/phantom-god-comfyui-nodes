@@ -2,7 +2,7 @@
 
 A ComfyUI custom-node pack for graph arrangement and architecture-aware model enhancement.
 
-**Current version:** 1.6.1
+**Current version:** 1.6.2
 **Requirements:** ComfyUI 0.46.0 or newer; Python 3.10 or newer
 
 ## Features
